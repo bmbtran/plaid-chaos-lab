@@ -49,20 +49,20 @@ The app read both pages, but it ignored the `removed` entry on page 2, so the pe
 | Recorded | `run --adapter app.ts --data cassette.json` | The same fake Plaid, filled with transactions recorded from Plaid Sandbox (`chaos-lab record`). Real field shapes and merchants, still deterministic. |
 | Sandbox | `run --adapter app.ts --sandbox` | Real Plaid Sandbox for everything Sandbox can reproduce. Recorded data for the rest. |
 
-Here's what Plaid Sandbox can and can't reproduce, as tested against the live API:
+What Plaid Sandbox can reproduce, tested against the live API:
 
 | Situation | In Sandbox | How the lab gets it |
 |---|---|---|
 | Item with a few hundred transactions over 7 accounts (real pagination at `count=100`) | yes | `/sandbox/public_token/create` with `user_transactions_dynamic` |
 | Pending transactions posting (removed + posted with `pending_transaction_id`) | yes | `/transactions/refresh`. Sandbox ignores a refresh sent right after the historical pull, so the lab retries. |
 | New transactions | yes | `/sandbox/transactions/create`, then a refresh |
-| `ITEM_LOGIN_REQUIRED` | yes | `/sandbox/item/reset_login`. Sync and `/item/get` then really return it. |
+| `ITEM_LOGIN_REQUIRED` | yes | `/sandbox/item/reset_login`. Afterwards both sync and `/item/get` return it. |
 | Duplicate, late, and missing webhooks | delivery only | The lab sends the webhook bodies itself, so it decides when each one arrives |
 | Repairing a login | no (needs Link update mode in a browser) | Recorded data |
 | Data changing mid-pagination | no (not on demand) | Recorded data |
 | Exact page boundaries | no | Recorded data |
 
-Ground truth in Sandbox mode is the lab's own full `/transactions/sync` drain, with its own cursor, plus `/item/get`. If Sandbox doesn't produce the needed situation (for example, a refresh that never lands), the scenario is reported as inconclusive. It is never reported as a pass.
+Ground truth in Sandbox mode is the lab's own full `/transactions/sync` drain, with its own cursor, plus `/item/get`. If Sandbox doesn't produce the needed situation (for example, a refresh that never lands), the scenario is reported as inconclusive and the run exits with code 2.
 
 A Sandbox run also records every change it observed as fake-bank steps. So a failure found against real Sandbox becomes a fixture that replays offline, with real item ids and access tokens replaced.
 
@@ -96,7 +96,7 @@ Real Sandbox (with `--sandbox`): `sandbox-initial-sync`, `sandbox-pending-to-pos
 | `sync-restarts-from-original-cursor` | After a mutation error, the next sync call doesn't use the loop's first cursor |
 | `webhook-handlers-succeed` | A handler throws or returns non-2xx (warning only) |
 
-Some scenarios also check invariants partway through. `login-required-then-repaired`, for example, checks that the user's data is still there during the outage, not only after it ends.
+Some scenarios also check invariants partway through. `login-required-then-repaired`, for example, checks that the user's data is still there while the Item is broken, as well as after the repair.
 
 ## Connecting your app
 
@@ -189,7 +189,7 @@ Exit codes: `0` everything passed, `1` an invariant failed, `2` usage or setup e
 
 The fake bank ([src/fake-plaid/bank.ts](src/fake-plaid/bank.ts)) keeps a versioned ledger per Item. A cursor names a version. A sync from it returns the diff to the current version (added, modified, removed, ordered by last change), paged over a frozen snapshot. If the bank changes while a pagination loop is open, that loop's page cursors fail with `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`. The loop's first cursor keeps working, as Plaid documents.
 
-Scenarios are seeded generators that produce a plain JSON script, so a fixture replays exactly. The in-process fake client yields a seeded number of event-loop turns per call. Concurrent handlers therefore interleave for real, and the same way every time.
+Scenarios are seeded generators that produce a plain JSON script, so a fixture replays exactly. The in-process fake client yields a seeded number of event-loop turns per call, so concurrent handlers interleave, and with the same seed they interleave in the same order.
 
 The reference app ([examples/reference-app.ts](examples/reference-app.ts)) has eight switchable bugs. The tests turn each one on alone and confirm that its scenario catches it: on every seed tried with synthetic data, and again with recorded data and with a stubbed Sandbox. The corrected app passes every scenario across 25 seeds.
 
