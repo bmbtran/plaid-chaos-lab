@@ -13,9 +13,8 @@ A run against real Plaid Sandbox. The app ignores `removed` from `/transactions/
 ```
 npm install
 npm test                # 41 tests, offline
-npm run demo:naive      # a typical first integration: 7 of 8 scenarios fail
-npm run demo:robust     # the corrected version: all pass
-npm run demo:sandbox    # real Plaid Sandbox; needs PLAID_CLIENT_ID and PLAID_SECRET in .env
+npm run demo:robust     # correct integration: all 8 scenarios pass across 25 seeds
+npm run demo:sandbox    # buggy integration on real Plaid Sandbox; needs PLAID_CLIENT_ID and PLAID_SECRET in .env
 ```
 
 ## What it catches
