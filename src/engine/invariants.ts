@@ -67,13 +67,13 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       const ids = new Set(app.transactions.map((t) => t.transaction_id));
       const pairs = [...replacements.entries()].filter(([posted, pending]) => ids.has(posted) && ids.has(pending));
       if (pairs.length === 0) return { passed: true, message: 'no pending/posted pair held twice' };
-      return {
-        passed: false,
-        message: pairs
-          .slice(0, MAX_LISTED)
-          .map(([posted, pending]) => `pending ${label(seen.get(pending), pending)} is still stored alongside its posted replacement ${label(seen.get(posted), posted)}`)
-          .join('; '),
-      };
+      const shown = pairs
+        .slice(0, MAX_LISTED)
+        .map(([posted, pending]) => `pending ${label(seen.get(pending), pending)} is still stored alongside its posted replacement ${label(seen.get(posted), posted)}`)
+        .join('; ');
+      const lead = pairs.length > 1 ? `${pairs.length} pending transactions are stored alongside their posted replacements: ` : '';
+      const more = pairs.length > MAX_LISTED ? `; and ${pairs.length - MAX_LISTED} more` : '';
+      return { passed: false, message: lead + shown + more };
     },
   },
 

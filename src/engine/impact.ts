@@ -32,21 +32,31 @@ export function userImpact(args: {
     out.push(`Spending is ${dir} by ${money(shown - actual)}: the app shows ${money(shown)}, the bank says ${money(actual)}.`);
   }
 
+  // Show a few concrete examples per problem, then a count, so real-sized ledgers stay readable.
+  const examples = (lines: string[], more: (n: number) => string) => {
+    out.push(...lines.slice(0, 3));
+    if (lines.length > 3) out.push(more(lines.length - 3));
+  };
+
   const counts = new Map<string, number>();
   for (const id of appIds) counts.set(id, (counts.get(id) ?? 0) + 1);
-  for (const [id, n] of counts) {
-    if (n > 1) out.push(`${name(seen.get(id), id)} (${money(seen.get(id)?.amount ?? 0)}) appears ${n} times in the activity feed.`);
-  }
+  examples(
+    [...counts]
+      .filter(([, n]) => n > 1)
+      .map(([id, n]) => `${name(seen.get(id), id)} (${money(seen.get(id)?.amount ?? 0)}) appears ${n} times in the activity feed.`),
+    (n) => `${n} more transactions appear more than once.`,
+  );
 
-  for (const [posted, pending] of replacements) {
-    if (appIdSet.has(posted) && appIdSet.has(pending)) {
-      const p = seen.get(pending);
-      const q = seen.get(posted);
-      out.push(
-        `${name(q, posted)} is listed twice: once as pending (${money(p?.amount ?? 0)}) and once as posted (${money(q?.amount ?? 0)}).`,
-      );
-    }
-  }
+  examples(
+    [...replacements]
+      .filter(([posted, pending]) => appIdSet.has(posted) && appIdSet.has(pending))
+      .map(([posted, pending]) => {
+        const p = seen.get(pending);
+        const q = seen.get(posted);
+        return `${name(q, posted)} is listed twice: once as pending (${money(p?.amount ?? 0)}) and once as posted (${money(q?.amount ?? 0)}).`;
+      }),
+    (n) => `${n} more purchases are listed twice the same way.`,
+  );
 
   const phantoms = [...appIdSet].filter((id) => !truthById.has(id) && !replacements.has(id) && ![...replacements.values()].includes(id));
   for (const id of phantoms.slice(0, 3)) {

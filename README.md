@@ -4,7 +4,10 @@ A test harness for the parts of a Plaid integration that usually break in produc
 
 You connect your webhook handler. The lab plays out each situation, then compares what your app stores with what Plaid says is true. When the two disagree, it shows the sequence of events that caused it, what your user would see, and a fixture that reproduces it in CI.
 
-Unofficial; not affiliated with Plaid Inc.
+
+![chaos-lab catching a pending-to-posted double count on real Plaid Sandbox data](docs/images/sandbox-double-count.png)
+
+Above: a real run against Plaid Sandbox. The app under test ignores the `removed` list from `/transactions/sync`, so when Sandbox posted 20 pending transactions, the app kept the pending copies and overstated spending by $515.27. The full report from this run is in [docs/sample-run/report.md](docs/sample-run/report.md).
 
 ```
 npm install
@@ -40,6 +43,17 @@ FAIL  pending-to-posted               failed 3 of 3 seeds; showing seed 1
 ```
 
 The app read both pages, but it ignored the `removed` entry on page 2, so the pending charge stayed next to its posted replacement. Each run also writes `report.md` and `report.json`.
+
+## Why a fake Plaid, and when real Sandbox
+
+Plaid Sandbox is real Plaid with test data, and the lab uses it wherever it can (`--sandbox`). It can't be the only mode:
+
+- Some situations can't be produced on demand. Sandbox has no way to change data right after page 2 of a sync, repairing a broken login needs Plaid Link in a browser, and page boundaries aren't yours to choose. Those are the bugs most likely to reach production.
+- A real Sandbox scenario takes 30 to 100 seconds. On the fake Plaid it takes milliseconds, so `npm test` covers hundreds of runs in about a minute.
+- Sandbox varies from run to run. During testing it ignored a refresh, reported data as ready before it was visible, and returned occasional 500 errors. A fake-Plaid run with the same seed is identical every time, which is what lets a fixture replay exactly.
+- The fake needs no keys or network, so anyone can clone the repo and run the tests, and so can CI.
+
+The fake Plaid ([src/fake-plaid/bank.ts](src/fake-plaid/bank.ts)) implements `/transactions/sync` and `/item/get` as Plaid documents them, and it holds the ground truth the app is checked against. Every real Sandbox run is also saved as a fake-Plaid replay, so a bug found on Sandbox becomes a fast regression test.
 
 ## Where the data comes from
 

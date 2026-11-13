@@ -1,7 +1,7 @@
 import type { ScenarioSummary } from '../engine/runner.ts';
 import { diffState, formatEvent, TAG_WIDTH } from './format.ts';
 
-const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
+const useColor = (process.stdout.isTTY || !!process.env.FORCE_COLOR) && !process.env.NO_COLOR;
 const paint = (code: string) => (s: string) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
 const red = paint('31');
 const green = paint('32');

@@ -1,0 +1,713 @@
+{
+  "fixtureVersion": 1,
+  "tool": "plaid-chaos-lab",
+  "scenario": "mutation-during-pagination",
+  "title": "Sync mutation during pagination",
+  "source": "recorded",
+  "seed": 1,
+  "finalChecks": [
+    "no-duplicate-transactions",
+    "no-pending-posted-double-count",
+    "no-phantom-transactions",
+    "no-missing-transactions",
+    "transaction-fields-current",
+    "sync-restarts-from-original-cursor"
+  ],
+  "script": {
+    "pageSize": 2,
+    "steps": [
+      {
+        "type": "register-item",
+        "item_id": "item_chaos_1",
+        "access_token": "access-sandbox-chaos-0001"
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "GPzgRddygMS79qlgmwWDsrbe1Wnnjgt6pxag5",
+              "account_owner": null,
+              "amount": 91.52556,
+              "authorized_date": "2026-10-14",
+              "authorized_datetime": null,
+              "category": [
+                "Service",
+                "Financial"
+              ],
+              "category_id": "18020000",
+              "check_number": null,
+              "counterparties": [
+                {
+                  "confidence_level": "VERY_HIGH",
+                  "entity_id": "1eDor7br409n5WmJm8YQ2B9oD6bgQ2230zvdo",
+                  "logo_url": "https://plaid-counterparty-logos.plaid.com/earnin_42.png",
+                  "name": "Earnin",
+                  "phone_number": null,
+                  "type": "financial_institution",
+                  "website": "earnin.com"
+                }
+              ],
+              "date": "2026-10-15",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": "Earnin",
+              "name": "671 POS PURCHASE EARNIN RE SC 9671543 349619",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "LOAN_PAYMENTS_EWA",
+                "primary": "LOAN_PAYMENTS",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "nVDGbAAMGrHkyZ4MoEJnspxGBjpAMbc3qbRee",
+              "transaction_type": "place",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "ylKXDrrMX7SvEdnJa5rlsKDgmXBBAli4anGRG",
+              "account_owner": null,
+              "amount": -534,
+              "authorized_date": "2026-11-07",
+              "authorized_datetime": null,
+              "category": [
+                "Transfer",
+                "Payroll"
+              ],
+              "category_id": "21009000",
+              "check_number": null,
+              "counterparties": [],
+              "date": "2026-11-08",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": null,
+              "name": "Monthly payment",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "LOAN_PAYMENTS_CAR_PAYMENT",
+                "primary": "LOAN_PAYMENTS",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "WGM7pkkL7xcLxNQPg7Mjs1kR59maEdSPzE85A",
+              "transaction_type": "special",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "MM4zRPPjz8hLWm31EKGesaMnveVVZAfLWpKgW",
+              "account_owner": null,
+              "amount": -508,
+              "authorized_date": "2026-11-09",
+              "authorized_datetime": null,
+              "category": [
+                "Transfer",
+                "Payroll"
+              ],
+              "category_id": "21009000",
+              "check_number": null,
+              "counterparties": [],
+              "date": "2026-11-10",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": null,
+              "name": "Monthly payment",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "LOAN_PAYMENTS_OTHER_PAYMENT",
+                "primary": "LOAN_PAYMENTS",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "LZarQPP4rkH1neBVJAjrhdqXPQ3zrMCenaMgy",
+              "transaction_type": "special",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          }
+        ],
+        "note": "initial transaction history"
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        },
+        "note": "initial update"
+      },
+      {
+        "type": "checkpoint",
+        "label": "after initial sync",
+        "checks": [
+          "no-duplicate-transactions",
+          "no-pending-posted-double-count",
+          "no-phantom-transactions",
+          "no-missing-transactions",
+          "transaction-fields-current"
+        ]
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "nVDGbAAMGrHkyZ4MoEJnspxRLWzzNmCA5VoqB",
+              "account_owner": null,
+              "amount": 33.92,
+              "authorized_date": "2026-11-05",
+              "authorized_datetime": null,
+              "category": [
+                "Shops",
+                "Equipment Rental"
+              ],
+              "category_id": "19022000",
+              "check_number": null,
+              "counterparties": [
+                {
+                  "confidence_level": "HIGH",
+                  "entity_id": null,
+                  "logo_url": null,
+                  "name": "Veritas Instrument Renta",
+                  "phone_number": null,
+                  "type": "merchant",
+                  "website": null
+                }
+              ],
+              "date": "2026-11-06",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": "Veritas Instrument Renta",
+              "name": "VERITAS INSTRUMENT RENTA",
+              "payment_channel": "in store",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "HIGH",
+                "detailed": "ENTERTAINMENT_MUSIC_AND_AUDIO",
+                "primary": "ENTERTAINMENT",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_ENTERTAINMENT.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "k5D6pAAx6lsKE8xjB4nzU4vQbG4qj1uJ5pnnK",
+              "transaction_type": "place",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "nVDGbAAMGrHkyZ4MoEJnspxRLWzzNmCA5VoqB",
+              "account_owner": null,
+              "amount": 82.09,
+              "authorized_date": "2026-11-06",
+              "authorized_datetime": null,
+              "category": [
+                "Shops",
+                "Supermarkets and Groceries"
+              ],
+              "category_id": "19047000",
+              "check_number": null,
+              "counterparties": [
+                {
+                  "confidence_level": "VERY_HIGH",
+                  "entity_id": "BpJANVDB4Nbnoe7bva5wq6VEQ8n8LV7jN65Ba",
+                  "logo_url": "https://plaid-merchant-logos.plaid.com/wegmans_1109.png",
+                  "name": "Wegmans",
+                  "phone_number": null,
+                  "type": "merchant",
+                  "website": "wegmans.com"
+                }
+              ],
+              "date": "2026-11-07",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": "https://plaid-merchant-logos.plaid.com/wegmans_1109.png",
+              "merchant_category_code": null,
+              "merchant_entity_id": "BpJANVDB4Nbnoe7bva5wq6VEQ8n8LV7jN65Ba",
+              "merchant_name": "Wegmans",
+              "name": "Wegmans",
+              "payment_channel": "in store",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_GROCERIES",
+                "primary": "FOOD_AND_DRINK",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_FOOD_AND_DRINK.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "zqrGAzzaGetZbwVGaAl3snReo5nrWdf3bmrrd",
+              "transaction_type": "place",
+              "unofficial_currency_code": null,
+              "website": "wegmans.com"
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "GPzgRddygMS79qlgmwWDsrbe1Wnnjgt6pxag5",
+              "account_owner": null,
+              "amount": -810,
+              "authorized_date": "2026-11-11",
+              "authorized_datetime": null,
+              "category": [
+                "Food and Drink",
+                "Restaurants"
+              ],
+              "category_id": "13005000",
+              "check_number": null,
+              "counterparties": [
+                {
+                  "confidence_level": "VERY_HIGH",
+                  "entity_id": "Do7pjknKqXrQkMr7qdV9JXrQ3Em8nzny5rOE1",
+                  "logo_url": "https://plaid-merchant-logos.plaid.com/sweetgreen_986.png",
+                  "name": "Sweetgreen",
+                  "phone_number": null,
+                  "type": "merchant",
+                  "website": "sweetgreen.com"
+                }
+              ],
+              "date": "2026-11-11",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": "https://plaid-merchant-logos.plaid.com/sweetgreen_986.png",
+              "merchant_category_code": null,
+              "merchant_entity_id": "Do7pjknKqXrQkMr7qdV9JXrQ3Em8nzny5rOE1",
+              "merchant_name": "Sweetgreen",
+              "name": "Sweetgreen inc payroll ppd id",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_RESTAURANT",
+                "primary": "FOOD_AND_DRINK",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_FOOD_AND_DRINK.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "LZarQPP4rkH1neBVJAjrhdqk98dBp7fenaM8g",
+              "transaction_type": "place",
+              "unofficial_currency_code": null,
+              "website": "sweetgreen.com"
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "ylKXDrrMX7SvEdnJa5rlsKDgmXBBAli4anGRG",
+              "account_owner": null,
+              "amount": -532,
+              "authorized_date": "2026-11-05",
+              "authorized_datetime": null,
+              "category": [
+                "Transfer",
+                "Payroll"
+              ],
+              "category_id": "21009000",
+              "check_number": null,
+              "counterparties": [],
+              "date": "2026-11-06",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": null,
+              "name": "Monthly payment",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "LOAN_PAYMENTS_CAR_PAYMENT",
+                "primary": "LOAN_PAYMENTS",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "oVDGWyyJGzH3EemxzaZQsNwK1evnXrupeyDPv",
+              "transaction_type": "special",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "MM4zRPPjz8hLWm31EKGesaMnveVVZAfLWpKgW",
+              "account_owner": null,
+              "amount": -544,
+              "authorized_date": "2026-10-17",
+              "authorized_datetime": null,
+              "category": [
+                "Transfer",
+                "Payroll"
+              ],
+              "category_id": "21009000",
+              "check_number": null,
+              "counterparties": [],
+              "date": "2026-10-18",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": null,
+              "name": "Monthly payment",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "LOAN_PAYMENTS_OTHER_PAYMENT",
+                "primary": "LOAN_PAYMENTS",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "rVDGKwwgGxHaEnjWk5Jvsg3r7R8nmLcdRM4W5",
+              "transaction_type": "special",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          }
+        ],
+        "note": "new activity"
+      },
+      {
+        "type": "arm-mutation",
+        "item_id": "item_chaos_1",
+        "after_page": 2,
+        "note": "bank data changes after page 2 is served",
+        "ops": [
+          {
+            "op": "remove",
+            "transaction_id": "k5D6pAAx6lsKE8xjB4nzU4vQbG4qj1uJ5pnnK"
+          },
+          {
+            "op": "modify",
+            "transaction_id": "zqrGAzzaGetZbwVGaAl3snReo5nrWdf3bmrrd",
+            "changes": {
+              "amount": 84.59
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "account_id": "MM4zRPPjz8hLWm31EKGesaMnveVVZAfLWpKgW",
+              "account_owner": null,
+              "amount": 56,
+              "authorized_date": "2026-11-09",
+              "authorized_datetime": null,
+              "category": [
+                "Interest",
+                "Interest Charged"
+              ],
+              "category_id": "15002000",
+              "check_number": null,
+              "counterparties": [],
+              "date": "2026-11-10",
+              "datetime": null,
+              "iso_currency_code": "USD",
+              "location": {
+                "address": null,
+                "city": null,
+                "country": null,
+                "lat": null,
+                "lon": null,
+                "postal_code": null,
+                "region": null,
+                "store_number": null
+              },
+              "logo_url": null,
+              "merchant_category_code": null,
+              "merchant_entity_id": null,
+              "merchant_name": null,
+              "name": "Interest charged",
+              "payment_channel": "other",
+              "payment_meta": {
+                "by_order_of": null,
+                "payee": null,
+                "payer": null,
+                "payment_method": null,
+                "payment_processor": null,
+                "ppd_id": null,
+                "reason": null,
+                "reference_number": null
+              },
+              "pending": false,
+              "pending_transaction_id": null,
+              "personal_finance_category": {
+                "confidence_level": "HIGH",
+                "detailed": "BANK_FEES_INTEREST_CHARGE",
+                "primary": "BANK_FEES",
+                "version": "v2"
+              },
+              "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_BANK_FEES.png",
+              "running_balance": null,
+              "transaction_code": null,
+              "transaction_id": "pVDylAAPyBHxVjAl7vLwf5DjmMvNpzsJMnG93",
+              "transaction_type": "special",
+              "unofficial_currency_code": null,
+              "website": null
+            }
+          }
+        ]
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        }
+      }
+    ]
+  },
+  "observed": {
+    "passed": false,
+    "failures": [
+      {
+        "id": "no-phantom-transactions",
+        "at": "final",
+        "message": "1 transaction the bank no longer has: k5D6pAAx6lsKE8xjB4nzU4vQbG4qj1uJ5pnnK \"Veritas Instrument Renta\" $33.92"
+      },
+      {
+        "id": "no-missing-transactions",
+        "at": "final",
+        "message": "2 of 8 bank transactions missing: rVDGKwwgGxHaEnjWk5Jvsg3r7R8nmLcdRM4W5 \"Monthly payment\" $-544.00, pVDylAAPyBHxVjAl7vLwf5DjmMvNpzsJMnG93 \"Interest charged\" $56.00"
+      },
+      {
+        "id": "transaction-fields-current",
+        "at": "final",
+        "message": "1 stale transaction:zqrGAzzaGetZbwVGaAl3snReo5nrWdf3bmrrd \"Wegmans\" $84.59: amount $82.09 ≠ $84.59"
+      },
+      {
+        "id": "sync-restarts-from-original-cursor",
+        "at": "final",
+        "message": "after the mutation error at #13, the next call (#14) used cursor=page 3 of loop from v1 instead of restarting with cursor=v1"
+      }
+    ],
+    "impact": [
+      "Spending is understated by $24.58: the app shows $207.54, the bank says $232.12.",
+      "\"Veritas Instrument Renta\" ($33.92) is shown but no longer exists at the bank.",
+      "2 transactions never show up: \"Monthly payment\" $544.00, \"Interest charged\" $56.00.",
+      "\"Wegmans\" shows $82.09 but actually cleared at $84.59."
+    ]
+  }
+}

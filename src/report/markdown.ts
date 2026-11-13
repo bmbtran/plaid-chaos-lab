@@ -12,13 +12,15 @@ function stateTable(capture: StateCapture, run: RunResult, onlyDifferences: bool
     `Item status: app shows \`${capture.app.itemStatus ?? 'not reported'}\`, Plaid says \`${capture.truth.itemStatus}\`.`,
     `${rows.length - rows.filter((r) => r.status !== 'ok').length} of ${rows.length} transactions match the bank.`,
   ];
+  const MAX_ROWS = 15;
   if (shown.length) {
     lines.push(
       '',
       '| | Transaction | Merchant | App | Bank |',
       '|---|---|---|---|---|',
-      ...shown.map((r) => `| ${r.status} | \`${r.id}\` | ${esc(r.merchant)} | ${esc(r.app)} | ${esc(r.bank)} |`),
+      ...shown.slice(0, MAX_ROWS).map((r) => `| ${r.status} | \`${r.id}\` | ${esc(r.merchant)} | ${esc(r.app)} | ${esc(r.bank)} |`),
     );
+    if (shown.length > MAX_ROWS) lines.push('', `${shown.length - MAX_ROWS} more rows like these are not shown.`);
   }
   return lines.join('\n');
 }

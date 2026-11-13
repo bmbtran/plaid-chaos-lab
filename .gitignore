@@ -2,3 +2,4 @@ node_modules/
 chaos-reports/
 *.log
 .env
+.playwright-mcp/
