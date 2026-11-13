@@ -1,0 +1,38 @@
+{
+  "name": "plaid-chaos-lab",
+  "version": "0.1.0",
+  "description": "Unofficial contract tester for Plaid integrations: adversarial, reproducible Transactions and Item lifecycle scenarios with invariants, counterexamples, and CI replay fixtures.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "chaos-lab": "./bin/chaos-lab.js"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "chaos-lab": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts examples/*.test.ts",
+    "demo:naive": "tsx src/cli.ts run --adapter examples/naive-adapter.ts --runs 5",
+    "demo:robust": "tsx src/cli.ts run --adapter examples/robust-adapter.ts --runs 25",
+    "demo:http-app": "tsx examples/http-app.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "plaid",
+    "testing",
+    "webhooks",
+    "transactions",
+    "contract-testing",
+    "chaos"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "plaid": "^51.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "tsx": "^4.23.15"
+  }
+}

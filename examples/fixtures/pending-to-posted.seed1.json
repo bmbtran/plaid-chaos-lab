@@ -1,0 +1,162 @@
+{
+  "fixtureVersion": 1,
+  "tool": "plaid-chaos-lab",
+  "scenario": "pending-to-posted",
+  "title": "Pending → posted replacement",
+  "seed": 1,
+  "finalChecks": [
+    "no-duplicate-transactions",
+    "no-pending-posted-double-count",
+    "no-phantom-transactions",
+    "no-missing-transactions",
+    "transaction-fields-current"
+  ],
+  "script": {
+    "pageSize": 2,
+    "steps": [
+      {
+        "type": "register-item",
+        "item_id": "item_chaos_1",
+        "access_token": "access-sandbox-chaos-0001"
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_8cada66998",
+              "account_id": "acc_checking",
+              "amount": 11.99,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "SPOTIFY",
+              "merchant_name": "Spotify",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_f5582925aa",
+              "account_id": "acc_checking",
+              "amount": 3.64,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "BLUE BOTTLE COFFEE",
+              "merchant_name": "Blue Bottle Coffee",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_2d1ffd57ed",
+              "account_id": "acc_checking",
+              "amount": 159.3,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "WHOLE FOODS MARKET",
+              "merchant_name": "Whole Foods Market",
+              "pending": true,
+              "pending_transaction_id": null
+            }
+          }
+        ],
+        "note": "initial transaction history"
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        },
+        "note": "initial update"
+      },
+      {
+        "type": "checkpoint",
+        "label": "after initial sync",
+        "checks": [
+          "no-duplicate-transactions",
+          "no-pending-posted-double-count",
+          "no-phantom-transactions",
+          "no-missing-transactions",
+          "transaction-fields-current"
+        ]
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "post",
+            "pending_id": "txn_2d1ffd57ed",
+            "posted": {
+              "transaction_id": "txn_c2a8790c95",
+              "account_id": "acc_checking",
+              "amount": 159.3,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "WHOLE FOODS MARKET",
+              "merchant_name": "Whole Foods Market",
+              "pending": false,
+              "pending_transaction_id": "txn_2d1ffd57ed"
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_9e390150f4",
+              "account_id": "acc_checking",
+              "amount": 108.58,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "WHOLE FOODS MARKET",
+              "merchant_name": "Whole Foods Market",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          }
+        ],
+        "note": "pending transactions post"
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        }
+      }
+    ]
+  },
+  "observed": {
+    "passed": false,
+    "failures": [
+      {
+        "id": "no-pending-posted-double-count",
+        "at": "final",
+        "message": "pending txn_2d1ffd57ed \"Whole Foods Market\" $159.30 (pending) is still stored alongside its posted replacement txn_c2a8790c95 \"Whole Foods Market\" $159.30"
+      },
+      {
+        "id": "no-phantom-transactions",
+        "at": "final",
+        "message": "1 transaction(s) no longer exist at the bank: txn_2d1ffd57ed \"Whole Foods Market\" $159.30 (pending)"
+      }
+    ],
+    "impact": [
+      "Spending is overstated by $159.30: the app shows $442.81, the bank says $283.51.",
+      "\"Whole Foods Market\" is listed twice: once as pending ($159.30) and once as posted ($159.30)."
+    ]
+  }
+}

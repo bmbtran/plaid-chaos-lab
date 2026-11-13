@@ -1,0 +1,235 @@
+{
+  "fixtureVersion": 1,
+  "tool": "plaid-chaos-lab",
+  "scenario": "mutation-during-pagination",
+  "title": "Sync mutation during pagination",
+  "seed": 1,
+  "finalChecks": [
+    "no-duplicate-transactions",
+    "no-pending-posted-double-count",
+    "no-phantom-transactions",
+    "no-missing-transactions",
+    "transaction-fields-current",
+    "sync-restarts-from-original-cursor"
+  ],
+  "script": {
+    "pageSize": 1,
+    "steps": [
+      {
+        "type": "register-item",
+        "item_id": "item_chaos_1",
+        "access_token": "access-sandbox-chaos-0001"
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_8cada66998",
+              "account_id": "acc_checking",
+              "amount": 11.99,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "SPOTIFY",
+              "merchant_name": "Spotify",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_f5582925aa",
+              "account_id": "acc_checking",
+              "amount": 3.64,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "BLUE BOTTLE COFFEE",
+              "merchant_name": "Blue Bottle Coffee",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          }
+        ],
+        "note": "initial transaction history"
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        },
+        "note": "initial update"
+      },
+      {
+        "type": "checkpoint",
+        "label": "after initial sync",
+        "checks": [
+          "no-duplicate-transactions",
+          "no-pending-posted-double-count",
+          "no-phantom-transactions",
+          "no-missing-transactions",
+          "transaction-fields-current"
+        ]
+      },
+      {
+        "type": "bank",
+        "item_id": "item_chaos_1",
+        "ops": [
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_2d1ffd57ed",
+              "account_id": "acc_checking",
+              "amount": 159.3,
+              "iso_currency_code": "USD",
+              "date": "2026-10-02",
+              "name": "WHOLE FOODS MARKET",
+              "merchant_name": "Whole Foods Market",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_2a8790c955",
+              "account_id": "acc_checking",
+              "amount": 29.26,
+              "iso_currency_code": "USD",
+              "date": "2026-10-03",
+              "name": "TRADER JOE'S",
+              "merchant_name": "Trader Joe's",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_e390150f4a",
+              "account_id": "acc_checking",
+              "amount": 5.76,
+              "iso_currency_code": "USD",
+              "date": "2026-10-04",
+              "name": "BLUE BOTTLE COFFEE",
+              "merchant_name": "Blue Bottle Coffee",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_6315e47840",
+              "account_id": "acc_checking",
+              "amount": 39.85,
+              "iso_currency_code": "USD",
+              "date": "2026-10-04",
+              "name": "LYFT",
+              "merchant_name": "Lyft",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_dd9b67a943",
+              "account_id": "acc_checking",
+              "amount": 30.63,
+              "iso_currency_code": "USD",
+              "date": "2026-10-04",
+              "name": "UBER",
+              "merchant_name": "Uber",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          }
+        ],
+        "note": "new activity"
+      },
+      {
+        "type": "arm-mutation",
+        "item_id": "item_chaos_1",
+        "after_page": 3,
+        "note": "bank data changes after page 3 is served",
+        "ops": [
+          {
+            "op": "remove",
+            "transaction_id": "txn_2d1ffd57ed"
+          },
+          {
+            "op": "modify",
+            "transaction_id": "txn_2a8790c955",
+            "changes": {
+              "amount": 31.76
+            }
+          },
+          {
+            "op": "add",
+            "txn": {
+              "transaction_id": "txn_799816da49",
+              "account_id": "acc_checking",
+              "amount": 29.77,
+              "iso_currency_code": "USD",
+              "date": "2026-10-05",
+              "name": "LYFT",
+              "merchant_name": "Lyft",
+              "pending": false,
+              "pending_transaction_id": null
+            }
+          }
+        ]
+      },
+      {
+        "type": "webhook",
+        "payload": {
+          "webhook_type": "TRANSACTIONS",
+          "webhook_code": "SYNC_UPDATES_AVAILABLE",
+          "item_id": "item_chaos_1",
+          "initial_update_complete": true,
+          "historical_update_complete": true,
+          "environment": "sandbox"
+        }
+      }
+    ]
+  },
+  "observed": {
+    "passed": false,
+    "failures": [
+      {
+        "id": "no-phantom-transactions",
+        "at": "final",
+        "message": "1 transaction(s) no longer exist at the bank: txn_2d1ffd57ed \"Whole Foods Market\" $159.30"
+      },
+      {
+        "id": "no-missing-transactions",
+        "at": "final",
+        "message": "3 of 7 bank transaction(s) missing: txn_6315e47840 \"Lyft\" $39.85, txn_dd9b67a943 \"Uber\" $30.63, txn_799816da49 \"Lyft\" $29.77"
+      },
+      {
+        "id": "transaction-fields-current",
+        "at": "final",
+        "message": "1 stale transaction(s): txn_2a8790c955 \"Trader Joe's\" $31.76: amount $29.26 ≠ $31.76"
+      },
+      {
+        "id": "sync-restarts-from-original-cursor",
+        "at": "final",
+        "message": "after the mutation error at #14, the next call (#15) used cursor=page 4 of loop from v1 instead of restarting with cursor=v1"
+      }
+    ],
+    "impact": [
+      "Spending is overstated by $56.55: the app shows $209.95, the bank says $153.40.",
+      "\"Whole Foods Market\" ($159.30) is shown but no longer exists at the bank.",
+      "3 transaction(s) never show up: \"Lyft\" $39.85, \"Uber\" $30.63, \"Lyft\" $29.77.",
+      "\"Trader Joe's\" shows $29.26 but actually cleared at $31.76."
+    ]
+  }
+}
