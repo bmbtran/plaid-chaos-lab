@@ -12,9 +12,9 @@ A run against real Plaid Sandbox. The app ignores `removed` from `/transactions/
 
 ```
 npm install
-npm test                # 41 tests, offline
-npm run demo:robust     # correct integration: all 8 scenarios pass across 25 seeds
-npm run demo:sandbox    # buggy integration on real Plaid Sandbox; needs PLAID_CLIENT_ID and PLAID_SECRET in .env
+npm test                # tests the lab itself (41 tests, offline, no keys)
+npm run demo:robust     # every scenario on the fake Plaid, 25 seeds each; expect all to pass
+npm run demo:sandbox    # a deliberately buggy app on real Plaid Sandbox; expect failures and a report (needs keys in .env)
 ```
 
 ## What it catches
