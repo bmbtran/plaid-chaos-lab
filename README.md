@@ -3,7 +3,6 @@
 I started this after connecting my own accounts through Plaid in Muse and ChatGPT. I was curious about the failure cases that show up later like a pending charge becomes posted, a webhook is delivered twice, or transaction data changes while an app is syncing
 
 Chaos Lab tests an app’s Plaid integration against those cases. It compares the app’s stored state with a known source of truth, then reports the user impact, the events that caused it, and a fixture that reproduces the failure.
-Tests whether an app's Plaid integration stays correct through the edge cases Plaid documents: pending→posted replacement, duplicate and out-of-order webhooks, data changing mid-pagination, `ITEM_LOGIN_REQUIRED`, and missed webhooks. It compares what the app stores with what Plaid says is true and reports the difference as user impact, with the events that caused it and a replayable fixture
 
 ![A run against real Plaid Sandbox](docs/images/sandbox-double-count.png)
 
