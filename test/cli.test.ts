@@ -41,8 +41,10 @@ test('run against the naive adapter exits 1 and writes report.md, report.json an
     assert.match(r.stdout, /What the user sees/);
     assert.doesNotMatch(r.stdout, /[✓✗⚡❌✅]/u, 'no emoji status marks');
     const md = await readFile(join(out, 'report.md'), 'utf8');
-    assert.match(md, /### Events/);
+    assert.match(md, /## pending-to-posted/);
+    assert.match(md, /\*\*User sees:\*\*/);
     assert.match(md, /double count/);
+    assert.doesNotMatch(md, /## missed-webhook-catchup/, 'passing scenarios get one table row, not a section');
     const json = JSON.parse(await readFile(join(out, 'report.json'), 'utf8'));
     assert.equal(json.passed, false);
     const fixtures = await readdir(join(out, 'fixtures'));
