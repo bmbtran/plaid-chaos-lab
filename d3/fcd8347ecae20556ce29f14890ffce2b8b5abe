@@ -1,0 +1,93 @@
+.gitattributes
+  s_b5402dfcb68974::t_ae124238d189a8 1
+.gitignore
+  s_b5402dfcb68974::t_ef0a072c59349a 1-4
+LICENSE
+  s_b5402dfcb68974::t_ea9e1c5971e5a5 1-21
+examples/fixtures/mutation-during-pagination.seed1.json
+  s_b5402dfcb68974::t_a57f64056c3d7f 1-235
+examples/fixtures/pending-to-posted.seed1.json
+  s_b5402dfcb68974::t_95cd66f78551d4 1-162
+package-lock.json
+  s_b5402dfcb68974::t_74716b1cd1c0fd 1-945
+package.json
+  s_b5402dfcb68974::t_33842ff4f7d151 1-38
+PLAN.md
+  s_b5402dfcb68974::t_2bfb56459e123c 1-232
+README.md
+  s_b5402dfcb68974::t_643009fc6cea54 1-178
+bin/chaos-lab.js
+  s_b5402dfcb68974::t_eb91d319fdd009 1-7
+examples/ci-fixture.test.ts
+  s_b5402dfcb68974::t_9747cecdca1986 1-19
+examples/http-app.ts
+  s_b5402dfcb68974::t_2641158f8602d5 1-123
+examples/naive-adapter.ts
+  s_b5402dfcb68974::t_1a4758bb2e6339 1-27
+examples/reference-app.ts
+  s_b5402dfcb68974::t_593461624e992a 1-250
+examples/robust-adapter.ts
+  s_b5402dfcb68974::t_acfbf6d9c43ffd 1-7
+src/cli.ts
+  s_b5402dfcb68974::t_6274f0a7cc78cb 1-244
+src/engine/fixture.ts
+  s_b5402dfcb68974::t_ea76900b350612 1-77
+src/engine/impact.ts
+  s_b5402dfcb68974::t_6ef9a1da0700ec 1-78
+src/engine/invariants.ts
+  s_b5402dfcb68974::t_a052f2decf34d6 1-208
+src/engine/runner.ts
+  s_b5402dfcb68974::t_f94daab4828c98 1-212
+src/engine/targets.ts
+  s_b5402dfcb68974::t_a703661a05cbc4 1-176
+src/fake-plaid/bank.ts
+  s_b5402dfcb68974::t_4652b3b9e7c9cd 1-375
+src/fake-plaid/client.ts
+  s_b5402dfcb68974::t_45eb89a09a37dc 1-56
+src/fake-plaid/errors.ts
+  s_b5402dfcb68974::t_d339a9cab8f29b 1-77
+src/fake-plaid/http-server.ts
+  s_b5402dfcb68974::t_dd437ce3b6f630 1-85
+src/index.ts
+  s_b5402dfcb68974::t_91793d1046a7e1 1-59
+src/report/console.ts
+  s_b5402dfcb68974::t_c111c5e46cafa3 1-81
+src/report/format.ts
+  s_b5402dfcb68974::t_9e302aadd8c81e 1-85
+src/report/markdown.ts
+  s_b5402dfcb68974::t_f15ab0f53e2eb4 1-81
+src/rng.ts
+  s_b5402dfcb68974::t_c2e391cdeb4b29 1-45
+src/scenarios/helpers.ts
+  s_b5402dfcb68974::t_07dd3592c39e4c 1-116
+src/scenarios/index.ts
+  s_b5402dfcb68974::t_4d342a9e7ea4ce 1-292
+src/types.ts
+  s_b5402dfcb68974::t_943ca18309ed4f 1-245
+test/bank.test.ts
+  s_b5402dfcb68974::t_8d8241d9103876 1-147
+test/cli.test.ts
+  s_b5402dfcb68974::t_995940925f3396 1-57
+test/engine.test.ts
+  s_b5402dfcb68974::t_85d45584fc9cca 1-146
+test/http.test.ts
+  s_b5402dfcb68974::t_1202b85b4c823e 1-57
+tsconfig.json
+  s_b5402dfcb68974::t_492c8a20e1c838 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3fcd8347ecae20556ce29f14890ffce2b8b5abe",
+  "prompts": {},
+  "sessions": {
+    "s_b5402dfcb68974": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a05c4e9-ed9a-4aaa-b684-56961e6dcb01",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tran Bui <tranbuimddv@gmail.com>"
+    }
+  }
+}
