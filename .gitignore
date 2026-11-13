@@ -3,3 +3,4 @@ chaos-reports/
 *.log
 .env
 .playwright-mcp/
+PLAN.md
