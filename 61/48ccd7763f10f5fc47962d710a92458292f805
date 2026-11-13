@@ -1,0 +1,19 @@
+README.md
+  s_b5402dfcb68974::t_0371fad5dd8e2e 16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6148ccd7763f10f5fc47962d710a92458292f805",
+  "prompts": {},
+  "sessions": {
+    "s_b5402dfcb68974": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a05c4e9-ed9a-4aaa-b684-56961e6dcb01",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tran Bui <tranbuimddv@gmail.com>"
+    }
+  }
+}
