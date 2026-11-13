@@ -1,0 +1,16 @@
+README.md
+  h_d271a4f3bd2ed6 3-5
+.gitignore
+  h_d271a4f3bd2ed6 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3641e6cc99e14e61d553835b3febf1d6a6190462",
+  "prompts": {},
+  "humans": {
+    "h_d271a4f3bd2ed6": {
+      "author": "Tran Bui <tranbuimddv@gmail.com>"
+    }
+  }
+}
