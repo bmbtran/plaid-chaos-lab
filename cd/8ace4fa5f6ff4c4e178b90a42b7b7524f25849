@@ -1,0 +1,25 @@
+README.md
+  s_b5402dfcb68974::t_42c6eb979cc437 65
+  s_b5402dfcb68974::t_84a50715265216 99
+  s_b5402dfcb68974::t_ebd9172ba5e500 52
+  s_b5402dfcb68974::t_fe3db4753fa0a5 59
+  s_b5402dfcb68974::t_180ab79795bb7d 192
+scripts/check-git-history.ts
+  s_b5402dfcb68974::t_9050d0c1746846 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd8ace4fa5f6ff4c4e178b90a42b7b7524f25849",
+  "prompts": {},
+  "sessions": {
+    "s_b5402dfcb68974": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a05c4e9-ed9a-4aaa-b684-56961e6dcb01",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Tran Bui <tranbuimddv@gmail.com>"
+    }
+  }
+}
