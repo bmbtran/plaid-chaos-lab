@@ -56,7 +56,8 @@ export function userImpact(args: {
   const missing = truth.filter((t) => !appIdSet.has(t.transaction_id));
   if (missing.length) {
     const sample = missing.slice(0, 3).map((t) => `${name(t, t.transaction_id)} ${money(t.amount)}`).join(', ');
-    out.push(`${missing.length} transaction(s) never show up: ${sample}${missing.length > 3 ? ', …' : ''}.`);
+    const lead = missing.length === 1 ? '1 transaction never shows up' : `${missing.length} transactions never show up`;
+    out.push(`${lead}: ${sample}${missing.length > 3 ? ', …' : ''}.`);
   }
 
   for (const a of app.transactions) {

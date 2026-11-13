@@ -11,10 +11,13 @@
   "scripts": {
     "chaos-lab": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts examples/*.test.ts",
+    "test": "node --import tsx --test test/bank.test.ts test/engine.test.ts test/http.test.ts test/cli.test.ts test/sandbox.test.ts examples/ci-fixture.test.ts",
     "demo:naive": "tsx src/cli.ts run --adapter examples/naive-adapter.ts --runs 5",
     "demo:robust": "tsx src/cli.ts run --adapter examples/robust-adapter.ts --runs 25",
-    "demo:http-app": "tsx examples/http-app.ts"
+    "demo:http-app": "tsx examples/http-app.ts",
+    "test:sandbox": "node --import tsx --test test/sandbox.live.test.ts",
+    "demo:sandbox": "tsx src/cli.ts run --adapter examples/naive-adapter.ts --sandbox --data examples/fixtures/sandbox-cassette.json",
+    "check-secrets": "tsx scripts/check-no-secrets.ts examples chaos-reports src test"
   },
   "engines": {
     "node": ">=20"

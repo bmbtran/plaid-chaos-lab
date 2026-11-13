@@ -1,4 +1,4 @@
-import type { AdapterFactory, AppStateSnapshot, IntegrationAdapter, PlaidWebhook } from '../types.ts';
+import type { AdapterFactory, AppStateSnapshot, IntegrationAdapter, PlaidClientLike, PlaidWebhook } from '../types.ts';
 import type { FakeBank } from '../fake-plaid/bank.ts';
 import { FakePlaidClient } from '../fake-plaid/client.ts';
 import { FakePlaidHttpServer } from '../fake-plaid/http-server.ts';
@@ -7,12 +7,24 @@ export type DeliveryResult = { ok: true } | { ok: false; error: string };
 export type ReconcileResult = { outcome: 'ran' } | { outcome: 'unsupported' } | { outcome: 'error'; message: string };
 
 /** Something the lab can run scenarios against. One `begin`/`end` pair per run. */
+/**
+ * What a run gives the app to talk to: the fake bank (synthetic / recorded
+ * runs) or a ready-made client for real Plaid Sandbox.
+ */
+export interface RunEnvironment {
+  seed: number;
+  bank?: FakeBank;
+  client?: PlaidClientLike;
+}
+
 export interface Target {
   readonly description: string;
   /** How long fake-API silence must last before the app is considered idle. */
   readonly quietMs: number;
+  /** True when the lab can see the app's Plaid calls (needed to detect quiescence precisely). */
+  readonly observesCalls: boolean;
   init(): Promise<void>;
-  begin(bank: FakeBank, seed: number): Promise<void>;
+  begin(env: RunEnvironment): Promise<void>;
   registerItem(itemId: string, accessToken: string): Promise<void>;
   deliverWebhook(payload: PlaidWebhook): Promise<DeliveryResult>;
   getState(itemId: string): Promise<AppStateSnapshot>;
@@ -27,6 +39,7 @@ const errMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export class InProcessTarget implements Target {
   readonly quietMs = 3;
+  readonly observesCalls = true;
   private adapter: IntegrationAdapter | null = null;
 
   constructor(
@@ -36,8 +49,10 @@ export class InProcessTarget implements Target {
 
   async init(): Promise<void> {}
 
-  async begin(bank: FakeBank, seed: number): Promise<void> {
-    this.adapter = await this.factory({ plaid: new FakePlaidClient(bank, seed) });
+  async begin(env: RunEnvironment): Promise<void> {
+    const plaid = env.client ?? (env.bank ? new FakePlaidClient(env.bank, env.seed) : null);
+    if (!plaid) throw new Error('begin() needs a bank or a client');
+    this.adapter = await this.factory({ plaid });
   }
 
   private get app(): IntegrationAdapter {
@@ -99,6 +114,8 @@ export interface HttpTargetOptions {
  */
 export class HttpTarget implements Target {
   readonly quietMs = 150;
+  /** Synthetic/recorded runs: the app calls our fake server, so we see its calls. Sandbox: it calls Plaid directly. */
+  observesCalls = true;
   readonly description: string;
   private server = new FakePlaidHttpServer();
   plaidBaseUrl = '';
@@ -111,8 +128,9 @@ export class HttpTarget implements Target {
     this.plaidBaseUrl = await this.server.listen(this.opts.plaidPort, this.opts.plaidHost ?? '127.0.0.1');
   }
 
-  async begin(bank: FakeBank): Promise<void> {
-    this.server.use(bank);
+  async begin(env: RunEnvironment): Promise<void> {
+    this.server.use(env.bank ?? null);
+    this.observesCalls = !!env.bank;
     await this.control('POST', '/reset', {});
   }
 

@@ -1,17 +1,18 @@
 import type { ScenarioSummary } from '../engine/runner.ts';
-import { diffState, formatEvent } from './format.ts';
+import { diffState, formatEvent, TAG_WIDTH } from './format.ts';
 
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
-const c = (code: number) => (s: string) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
-const red = c(31);
-const green = c(32);
-const yellow = c(33);
-const dim = c(2);
-const bold = c(1);
-const cyan = c(36);
+const paint = (code: string) => (s: string) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
+const red = paint('31');
+const green = paint('32');
+const yellow = paint('33');
+const dim = paint('2');
+const bold = paint('1');
 
 export interface ReportContext {
   target: string;
+  /** What the scenarios ran on, e.g. "synthetic data" or "real Plaid Sandbox + recorded Sandbox data". */
+  data?: string;
   seeds: number[];
   summaries: ScenarioSummary[];
   fixtures: Record<string, string>;
@@ -19,63 +20,88 @@ export interface ReportContext {
   replayHint?: string;
 }
 
+const INDENT = '      ';
+const ID_WIDTH = 32;
+
+function seedsText(s: ScenarioSummary): string {
+  const n = s.seeds.length;
+  const word = n === 1 ? 'seed' : 'seeds';
+  return s.failedSeeds.length ? `failed ${s.failedSeeds.length} of ${n} ${word}` : `${n} ${word}`;
+}
+
 export function renderConsole(ctx: ReportContext): string {
-  const out: string[] = [];
+  const out: string[] = [''];
   const failed = ctx.summaries.filter((s) => s.failedSeeds.length > 0);
-  out.push('');
-  out.push(
-    `${bold('Plaid Integration Chaos Lab')}  ${dim('·')}  ${ctx.target}  ${dim('·')}  ${ctx.summaries.length} scenario(s) × ${ctx.seeds.length} seed(s)`,
-  );
-  out.push('');
+  const sources = new Set(ctx.summaries.map((s) => s.representative.source));
+  const showSource = sources.size > 1 || !sources.has('synthetic');
+
+  out.push(`${bold('chaos-lab')}  ${ctx.target}${ctx.data ? dim(`  on ${ctx.data}`) : ''}`, '');
 
   for (const s of ctx.summaries) {
-    const id = s.scenario.id.padEnd(30);
-    const warn = s.warnings ? yellow(`  ${s.warnings} warning(s)`) : '';
-    if (s.failedSeeds.length === 0) {
-      out.push(`${green('✓')} ${id} ${green('PASS')}  ${dim(`${s.seeds.length}/${s.seeds.length} seeds`)}${warn}`);
+    const r = s.representative;
+    const source = showSource ? dim(r.source.padEnd(10)) : '';
+    const warn = s.warnings ? yellow(`  ${s.warnings} with warnings`) : '';
+    if (s.inconclusive) {
+      out.push(`${yellow('skip')}  ${source}${s.scenario.id.padEnd(ID_WIDTH)}${dim(`inconclusive: ${s.inconclusive}`)}`);
       continue;
     }
-    const r = s.representative;
-    out.push(
-      `${red('✗')} ${id} ${red('FAIL')}  ${dim(`failed ${s.failedSeeds.length}/${s.seeds.length} seeds · counterexample seed ${r.seed}, page size ${r.pageSize}`)}${warn}`,
-    );
-    out.push(`    ${dim(s.scenario.title + ': ' + s.scenario.whyItMatters)}`);
+    if (!s.failedSeeds.length) {
+      out.push(`${green('pass')}  ${source}${s.scenario.id.padEnd(ID_WIDTH)}${dim(seedsText(s))}${warn}`);
+      continue;
+    }
+    out.push(`${red(bold('FAIL'))}  ${source}${bold(s.scenario.id.padEnd(ID_WIDTH))}${dim(`${seedsText(s)}; showing seed ${r.seed}`)}${warn}`);
+    out.push('');
+
     for (const inv of r.invariants.filter((i) => !i.passed)) {
-      const mark = inv.severity === 'error' ? red('✗') : yellow('!');
-      out.push(`    ${mark} ${bold(inv.id)} ${dim(`@ ${inv.at}`)}`);
-      out.push(`      ${inv.message}`);
+      const mark = inv.severity === 'error' ? red(inv.id) : yellow(`${inv.id} (warning)`);
+      out.push(`${INDENT}${mark} ${dim(`at ${inv.at}`)}`);
+      out.push(`${INDENT}  ${inv.message}`);
     }
+
     if (r.impact.length) {
-      out.push(`    ${bold('What the user sees:')}`);
-      for (const line of r.impact.slice(0, 5)) out.push(`      • ${line}`);
+      out.push('', `${INDENT}${bold('What the user sees')}`);
+      for (const line of r.impact.slice(0, 5)) out.push(`${INDENT}  ${line}`);
     }
-    out.push(`    ${bold('Counterexample:')}`);
-    r.timeline.forEach((e, i) => out.push(`      ${dim(String(i + 1).padStart(2) + '.')} ${formatEvent(e)}`));
+
+    out.push('', `${INDENT}${bold('Events')}`);
+    const width = String(r.timeline.length).length;
+    r.timeline.forEach((e, i) => {
+      const f = formatEvent(e);
+      const tag = f.tag.padEnd(TAG_WIDTH);
+      out.push(`${INDENT}  ${dim(String(i + 1).padStart(width))}  ${f.emphasis ? yellow(tag) : dim(tag)} ${f.text}`);
+    });
+
     const final = r.states.filter((st) => st.label === 'final').at(-1);
     if (final) {
       const rows = diffState(final, r);
       const bad = rows.filter((row) => row.status !== 'ok');
       if (bad.length) {
-        out.push(`    ${bold('Final state (app vs bank):')} ${dim(`${rows.length - bad.length} rows ok`)}`);
+        out.push('', `${INDENT}${bold('Final state')} ${dim(`(${rows.length - bad.length} of ${rows.length} rows match the bank)`)}`);
         for (const row of bad.slice(0, 8)) {
-          out.push(`      ${red(row.status.padEnd(12))} ${row.id} ${row.merchant.padEnd(20)} app ${row.app.padEnd(22)} bank ${row.bank}`);
+          out.push(
+            `${INDENT}  ${red(row.status.padEnd(14))}${row.id}  ${row.merchant.slice(0, 22).padEnd(23)}app ${row.app.padEnd(20)} bank ${row.bank}`,
+          );
         }
+        if (bad.length > 8) out.push(`${INDENT}  ${dim(`${bad.length - 8} more`)}`);
       }
     }
+
     const fixture = ctx.fixtures[s.scenario.id];
-    if (fixture) out.push(`    ${bold('Replay fixture:')} ${cyan(fixture)}`);
+    if (fixture) out.push('', `${INDENT}${dim('fixture')}  ${fixture}`);
     out.push('');
   }
 
   out.push('');
   const total = ctx.summaries.length;
-  out.push(
-    failed.length === 0
-      ? green(bold(`All ${total} scenarios passed across ${ctx.seeds.length} seed(s).`))
-      : red(bold(`${failed.length}/${total} scenarios failed.`)) +
-          (ctx.outDir ? `  Full report: ${cyan(ctx.outDir + '/report.md')}` : ''),
-  );
-  if (failed.length && ctx.replayHint) out.push(dim(`Replay a counterexample: npx chaos-lab replay <fixture> ${ctx.replayHint}`));
+  const skipped = ctx.summaries.filter((s) => s.inconclusive).length;
+  if (!failed.length && !skipped) {
+    out.push(green(`All ${total} scenarios passed.`));
+  } else if (!failed.length) {
+    out.push(yellow(`${total - skipped} of ${total} scenarios passed; ${skipped} inconclusive (Plaid Sandbox did not cooperate).`));
+  } else {
+    out.push(`${red(bold(`${failed.length} of ${total} scenarios failed.`))}${ctx.outDir ? `  Report: ${ctx.outDir}/report.md` : ''}`);
+    if (ctx.replayHint && Object.keys(ctx.fixtures).length) out.push(dim(`Replay a failure: chaos-lab replay <fixture> ${ctx.replayHint}`));
+  }
   out.push('');
   return out.join('\n');
 }

@@ -68,10 +68,14 @@ export class FakePlaidError extends Error {
  * `err.response.data.error_code` behaves exactly as it would against Plaid.
  */
 export function toAxiosStyleError(err: FakePlaidError): Error {
-  const e = new Error(`Request failed with status code ${err.body.status}`) as Error & Record<string, unknown>;
+  return axiosStyleError(err.body);
+}
+
+export function axiosStyleError(body: PlaidApiError): Error {
+  const e = new Error(`Request failed with status code ${body.status}`) as Error & Record<string, unknown>;
   e.isAxiosError = true;
   e.name = 'AxiosError';
   e.code = 'ERR_BAD_REQUEST';
-  e.response = { status: err.body.status, statusText: 'Bad Request', data: err.body, headers: {} };
+  e.response = { status: body.status, statusText: 'Bad Request', data: body, headers: {} };
   return e;
 }

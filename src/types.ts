@@ -171,8 +171,12 @@ export interface ScenarioMeta {
 }
 
 export interface Scenario extends ScenarioMeta {
-  build(seed: number): Script;
+  /** `pool`: real transactions recorded from Sandbox to use instead of synthetic ones. */
+  build(seed: number, pool?: Transaction[]): Script;
 }
+
+/** Where a run's data and events came from. */
+export type RunSource = 'synthetic' | 'recorded' | 'sandbox';
 
 // ───────────────────────── Results ─────────────────────────
 
@@ -201,7 +205,9 @@ export type DecodedCursor =
   | { kind: 'start' }
   | { kind: 'version'; version: number }
   | { kind: 'page'; snapshot: number; baseVersion: number; page: number }
-  | { kind: 'invalid'; raw: string };
+  | { kind: 'invalid'; raw: string }
+  /** A real Plaid cursor; labelled c1, c2, … in order of first appearance. */
+  | { kind: 'opaque'; label: string };
 
 export type TimelineEvent =
   | { seq: number; kind: 'register'; itemId: string }
@@ -234,6 +240,7 @@ export interface StateCapture {
 
 export interface RunResult {
   scenario: string;
+  source: RunSource;
   seed: number;
   pageSize: number;
   passed: boolean;

@@ -28,8 +28,8 @@ const pendingToPosted: Scenario = {
   whyItMatters: 'Apps that only handle `added` show the purchase twice and overstate spending.',
   docs: [DOCS.pendingPosted, DOCS.sync],
   finalChecks: LEDGER_CHECKS,
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const posted = f.many(f.rng.int(2, 4));
     const pending = f.many(f.rng.int(1, 2), { pending: true });
     const postOps: BankOp[] = pending.map((p) => ({
@@ -58,8 +58,8 @@ const duplicateWebhook: Scenario = {
     'Plaid tells you to handle duplicate webhooks. Handlers that run concurrently and append rows end up with the same transactions twice.',
   docs: [DOCS.webhooks],
   finalChecks: LEDGER_CHECKS,
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(2, 4));
     const fresh = f.many(f.rng.int(2, 5));
     return {
@@ -90,8 +90,8 @@ const outOfOrderItemEvents: Scenario = {
     'Plaid does not guarantee webhook order. An app that sets Item health from whichever webhook came last tells a healthy user to reconnect their bank. Re-read the state with /item/get instead.',
   docs: [DOCS.webhooks, DOCS.itemGet],
   finalChecks: [...LEDGER_CHECKS, 'item-status-matches'],
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(2, 4));
     const concurrent = seed % 3 === 0;
     const deliveries: Step[] = [
@@ -120,8 +120,8 @@ const paginatedSync: Scenario = {
   whyItMatters: 'Code that reads one page drops transactions and keeps stale amounts.',
   docs: [DOCS.sync],
   finalChecks: LEDGER_CHECKS,
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = [...f.many(f.rng.int(6, 10)), ...f.many(f.rng.int(1, 2), { pending: true })];
     const settled = initial.filter((t) => !t.pending);
     const modified = settled.slice(0, f.rng.int(1, 2));
@@ -156,8 +156,8 @@ const mutationDuringPagination: Scenario = {
     'Retrying only the failed page loops on the error. Keeping the partial pages leaves phantom transactions that no longer exist.',
   docs: [DOCS.mutation, DOCS.sync],
   finalChecks: [...LEDGER_CHECKS, 'sync-restarts-from-original-cursor'],
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(2, 3));
     const batch = f.many(f.rng.int(4, 7));
     const pageSize = f.rng.int(1, Math.floor(batch.length / 2));
@@ -196,8 +196,8 @@ const loginRequiredThenRepaired: Scenario = {
     'During the outage the user should see a reconnect prompt and keep their existing data. Afterwards the prompt should clear and syncing should resume.',
   docs: [DOCS.itemErrors, DOCS.loginRepaired],
   finalChecks: [...LEDGER_CHECKS, 'item-status-matches'],
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(3, 5));
     const fresh = f.many(f.rng.int(2, 4));
     return {
@@ -226,8 +226,8 @@ const missedWebhookReconcile: Scenario = {
     'Webhooks can go missing. An app with no scheduled catch-up sync never shows those transactions.',
   docs: [DOCS.webhooks, DOCS.sync],
   finalChecks: LEDGER_CHECKS,
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(2, 4));
     const fresh = f.many(f.rng.int(2, 5));
     return {
@@ -250,8 +250,8 @@ const missedWebhookCatchup: Scenario = {
   whyItMatters: 'Apps that sync from their stored cursor recover from missed webhooks automatically. Apps that do anything else do not.',
   docs: [DOCS.sync],
   finalChecks: LEDGER_CHECKS,
-  build(seed) {
-    const f = new DataFactory(seed);
+  build(seed, pool) {
+    const f = new DataFactory(seed, pool);
     const initial = f.many(f.rng.int(2, 3));
     const pending = f.txn({ pending: true });
     const batchA = f.many(f.rng.int(1, 3));

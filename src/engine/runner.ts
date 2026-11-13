@@ -3,6 +3,8 @@ import type {
   InvariantResult,
   NewTimelineEvent,
   RunResult,
+  RunSource,
+  Transaction,
   Scenario,
   ScenarioMeta,
   Script,
@@ -23,6 +25,7 @@ export async function runScript(args: {
   scenario: ScenarioMeta;
   script: Script;
   seed: number;
+  source?: RunSource;
 }): Promise<RunResult> {
   const { target, scenario, script, seed } = args;
   const timeline: TimelineEvent[] = [];
@@ -136,7 +139,7 @@ export async function runScript(args: {
     }
   };
 
-  await target.begin(bank, seed);
+  await target.begin({ bank, seed });
   try {
     for (const step of script.steps) {
       await exec(step);
@@ -164,6 +167,7 @@ export async function runScript(args: {
 
   return {
     scenario: scenario.id,
+    source: args.source ?? 'synthetic',
     seed,
     pageSize: script.pageSize,
     passed: !invariants.some((r) => !r.passed && r.severity === 'error'),
@@ -175,8 +179,8 @@ export async function runScript(args: {
   };
 }
 
-export async function runScenario(target: Target, scenario: Scenario, seed: number): Promise<RunResult> {
-  return runScript({ target, scenario, script: scenario.build(seed), seed });
+export async function runScenario(target: Target, scenario: Scenario, seed: number, pool?: Transaction[]): Promise<RunResult> {
+  return runScript({ target, scenario, script: scenario.build(seed, pool), seed, source: pool ? 'recorded' : 'synthetic' });
 }
 
 export interface ScenarioSummary {
@@ -186,6 +190,8 @@ export interface ScenarioSummary {
   /** First failing run (the counterexample), or the first run if all passed. */
   representative: RunResult;
   warnings: number;
+  /** Set when real Sandbox couldn't produce the scenario's situation; the run neither passed nor failed. */
+  inconclusive?: string;
 }
 
 /** Run a scenario across many seeds; keep the first failure as the counterexample. */
@@ -193,13 +199,14 @@ export async function exploreScenario(
   target: Target,
   scenario: Scenario,
   seeds: number[],
-  onRun?: (r: RunResult) => void,
+  opts: { pool?: Transaction[]; onRun?: (r: RunResult) => void } = {},
 ): Promise<ScenarioSummary> {
   const failedSeeds: number[] = [];
   let representative: RunResult | null = null;
   let warnings = 0;
   for (const seed of seeds) {
-    const r = await runScenario(target, scenario, seed);
+    const r = await runScenario(target, scenario, seed, opts.pool);
+    const onRun = opts.onRun;
     onRun?.(r);
     if (r.invariants.some((i) => !i.passed && i.severity === 'warn')) warnings += 1;
     if (!r.passed) {

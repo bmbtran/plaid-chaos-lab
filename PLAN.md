@@ -189,7 +189,7 @@ Seed controls: transaction data, page-size cap (1–4), which page the mutation 
 
 ---
 
-## Phase 2 — Real Plaid Sandbox mode (proposed)
+## Phase 2 — Real Plaid Sandbox mode
 
 Goal: run scenarios against **real Plaid Sandbox** where Sandbox can produce the event. Where it can't do that deterministically, fall back to the fake bank seeded with **recorded real `/transactions/sync` responses**.
 
@@ -223,10 +223,18 @@ Goal: run scenarios against **real Plaid Sandbox** where Sandbox can produce the
 - Plaid **Sandbox** `PLAID_CLIENT_ID` + `PLAID_SECRET` in a local `.env` (git-ignored; never committed or printed).
 - For relay mode only: a tunnel (`cloudflared tunnel --url http://localhost:<port>`; quick tunnels need no account).
 
+### Findings from the live API (2026-11-13)
+- A `user_transactions_dynamic` Item has 311 transactions over 7 accounts. An app syncing with `count=100` really paginates.
+- A `/transactions/refresh` sent right after the historical pull is silently ignored; a second one posts 20 pending transactions (removed + posted with `pending_transaction_id`). The lab retries refreshes that change nothing within 20s.
+- `HISTORICAL_UPDATE_COMPLETE` can be reported a moment before the data is visible. "Ready" therefore means complete, non-empty, and stable across two drains.
+- `/sandbox/item/fire_webhook` needs a public webhook URL on the Item (`SANDBOX_WEBHOOK_INVALID` otherwise), and it refuses `LOGIN_REPAIRED` while the Item is broken. So the default "direct" mode delivers webhook bodies itself.
+- `/transactions/sync` occasionally returns a transient `INTERNAL_SERVER_ERROR`. Idempotent calls are retried with backoff.
+
 ### Definitions of done
-- [ ] `chaos-lab run --sandbox` creates real Items and runs the `real`/`partial` scenarios against the reference app (robust passes; each single-bug app is caught).
-- [ ] Truth comes from an independent Sandbox drain + `/item/get`; settling is bounded, and a timeout is reported as `inconclusive`, never as pass.
-- [ ] `chaos-lab record --sandbox` writes a cassette. `--data cassette.json` runs all 8 scenarios deterministically on recorded data, and the same seed gives the same result.
-- [ ] Relay mode proxies real Plaid webhooks with drop/duplicate/reorder faults.
-- [ ] Credentials are read only from env and redacted from reports, timelines and fixtures (tested).
-- [ ] Live-Sandbox tests are skipped when credentials are absent, so CI stays green offline.
+- [x] `chaos-lab run --sandbox` creates real Items and runs the 5 Sandbox scenarios. Verified live: the robust app passes, and `ignoreRemoved` and `trustWebhookOrder` are caught, both in-process and over HTTP with the official v51 SDK. The full single-bug matrix is verified against a Sandbox stub (offline tests).
+- [x] Truth comes from an independent Sandbox drain plus `/item/get`. Waits are bounded, and Sandbox not cooperating is reported as `inconclusive` (exit 2), never as a pass.
+- [x] `chaos-lab record` writes a cassette (checked in: [examples/fixtures/sandbox-cassette.json](examples/fixtures/sandbox-cassette.json), 349 real transactions, 20 real pending→posted pairs). `--data` runs all 8 scenarios on it deterministically. `--sandbox` runs the 5 non-reproducible scenarios on recorded data.
+- [x] Every Sandbox run records what it observed as fake-bank steps, so a real failure replays offline with the same verdicts (verified live). Real item ids and access tokens are replaced.
+- [ ] Relay mode (proxy real Plaid webhooks through a tunnel, with drop/duplicate/reorder). Not built: it needs a public tunnel URL, and direct mode already controls delivery.
+- [x] Credentials are read only from env and sent only in request bodies, and they never appear in results, fixtures or cassettes. Checked by the live test and by `npm run check-secrets`.
+- [x] Live tests run only with `npm run test:sandbox` and Sandbox keys present; `npm test` stays offline.

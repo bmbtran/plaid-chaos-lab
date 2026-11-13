@@ -347,6 +347,8 @@ export function describeCursor(c: DecodedCursor | undefined): string {
       return `cursor=page ${c.page + 1} of loop from v${c.baseVersion}`;
     case 'invalid':
       return `cursor=<invalid ${c.raw.slice(0, 12)}…>`;
+    case 'opaque':
+      return `cursor=${c.label}`;
   }
 }
 
@@ -362,13 +364,13 @@ export function summarizeOps(ops: BankOp[], seen: Map<string, Transaction>): str
         case 'add':
           return `add ${label(op.txn, op.txn.transaction_id)}`;
         case 'modify':
-          return `modify ${op.transaction_id} ${Object.entries(op.changes)
-            .map(([k, v]) => `${k}→${typeof v === 'number' ? `$${v.toFixed(2)}` : JSON.stringify(v)}`)
+          return `modify ${op.transaction_id}: ${Object.entries(op.changes)
+            .map(([k, v]) => `${k} ${typeof v === 'number' ? `$${v.toFixed(2)}` : JSON.stringify(v)}`)
             .join(', ')}`;
         case 'remove':
           return `remove ${label(seen.get(op.transaction_id), op.transaction_id)}`;
         case 'post':
-          return `post ${op.pending_id} → ${label(op.posted, op.posted.transaction_id)} (pending removed + posted added)`;
+          return `pending ${op.pending_id} posts as ${label(op.posted, op.posted.transaction_id)}`;
       }
     })
     .join('; ');

@@ -21,19 +21,23 @@ import { type Bugs, createReferenceApp, NO_BUGS } from './reference-app.ts';
 export type SdkFlavor = 'current' | 'legacy';
 
 /** Build a Plaid client from the official SDK, pointed at `baseUrl`. */
-export function officialPlaidClient(baseUrl: string, flavor: SdkFlavor): PlaidClientLike {
+export function officialPlaidClient(
+  baseUrl: string,
+  flavor: SdkFlavor,
+  creds: { clientId: string; secret: string } = { clientId: 'chaos-client', secret: 'chaos-secret' },
+): PlaidClientLike {
   if (flavor === 'legacy') {
-    // Classic axios-based PlaidApi — already has the PlaidClientLike call shape.
+    // Classic axios-based PlaidApi: already has the PlaidClientLike call shape.
     const api = new PlaidApi(
       new Configuration({
         basePath: baseUrl,
-        baseOptions: { headers: { 'PLAID-CLIENT-ID': 'chaos-client', 'PLAID-SECRET': 'chaos-secret' } },
+        baseOptions: { headers: { 'PLAID-CLIENT-ID': creds.clientId, 'PLAID-SECRET': creds.secret } },
       }),
     );
     return api as unknown as PlaidClientLike;
   }
   // v51+ PlaidClient: responses are bodies; errors are PlaidError with `.body`.
-  const client = new PlaidClient({ baseUrl, clientId: 'chaos-client', secret: 'chaos-secret', maxRetries: 0 });
+  const client = new PlaidClient({ baseUrl, clientId: creds.clientId, secret: creds.secret, maxRetries: 0 });
   return {
     async transactionsSync(req) {
       const data = await client.transactions.sync({
@@ -54,10 +58,12 @@ export interface HttpAppOptions {
   plaidBaseUrl: string;
   sdk?: SdkFlavor;
   bugs?: Partial<Bugs>;
+  /** Real Plaid credentials, for running against Sandbox. Omit for the lab's fake Plaid API. */
+  creds?: { clientId: string; secret: string };
 }
 
 export async function startHttpApp(opts: HttpAppOptions): Promise<{ url: string; close: () => Promise<void> }> {
-  const plaid = officialPlaidClient(opts.plaidBaseUrl, opts.sdk ?? 'current');
+  const plaid = officialPlaidClient(opts.plaidBaseUrl, opts.sdk ?? 'current', opts.creds);
   const bugs = { ...NO_BUGS, ...opts.bugs };
   let app: IntegrationAdapter = createReferenceApp(plaid, bugs);
 
@@ -113,11 +119,14 @@ export async function startHttpApp(opts: HttpAppOptions): Promise<{ url: string;
 
 if (process.argv[1] && /http-app\.ts$/.test(process.argv[1])) {
   const { bugsFromEnv } = await import('./naive-adapter.ts');
+  const { loadSandboxCredentials, SANDBOX_BASE_URL } = await import('../src/sandbox/api.ts');
+  const plaidBaseUrl = process.env.PLAID_BASE_URL ?? 'http://127.0.0.1:4010';
   const app = await startHttpApp({
     port: Number(process.env.PORT ?? 3005),
-    plaidBaseUrl: process.env.PLAID_BASE_URL ?? 'http://127.0.0.1:4010',
+    plaidBaseUrl,
     sdk: (process.env.PLAID_SDK as SdkFlavor) ?? 'current',
     bugs: process.env.CHAOS_BUGS ? bugsFromEnv() : NO_BUGS,
+    creds: plaidBaseUrl === SANDBOX_BASE_URL ? loadSandboxCredentials() : undefined,
   });
-  console.log(`[http-app] listening on ${app.url} (webhooks: ${app.url}/webhooks/plaid, control: ${app.url}/chaos)`);
+  console.log(`[http-app] listening on ${app.url}; webhooks at /webhooks/plaid, control at /chaos; Plaid at ${plaidBaseUrl}`);
 }

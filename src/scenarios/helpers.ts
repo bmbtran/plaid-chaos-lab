@@ -29,14 +29,31 @@ const MERCHANTS: Array<[string, number, number]> = [
   ['CVS Pharmacy', 6, 45],
 ];
 
-/** Generates realistic, unique, seeded transactions. */
+/**
+ * Generates unique, seeded transactions: synthetic ones by default, or real
+ * ones from a pool recorded off Plaid Sandbox (full Plaid field set, real
+ * merchants/amounts/dates) when `pool` is given.
+ */
 export class DataFactory {
   readonly rng: Rng;
   private ids = new Set<string>();
   private day = 0;
+  private pool: Transaction[];
 
-  constructor(seed: number) {
+  constructor(seed: number, pool?: Transaction[]) {
     this.rng = new Rng(seed);
+    this.pool = pool?.length ? this.rng.shuffle(pool.filter((t) => !t.pending_transaction_id)) : [];
+  }
+
+  /** Next unused recorded transaction, or null when the pool is exhausted / absent. */
+  private fromPool(pending: boolean): Transaction | null {
+    while (this.pool.length) {
+      const real = this.pool.shift()!;
+      if (this.ids.has(real.transaction_id)) continue;
+      this.ids.add(real.transaction_id);
+      return { ...real, pending, pending_transaction_id: null };
+    }
+    return null;
   }
 
   private id(): string {
@@ -48,6 +65,8 @@ export class DataFactory {
   }
 
   txn(opts: { pending?: boolean; merchant?: string } = {}): Transaction {
+    const recorded = this.fromPool(opts.pending ?? false);
+    if (recorded) return recorded;
     const [merchant, lo, hi] = opts.merchant
       ? MERCHANTS.find((m) => m[0] === opts.merchant) ?? [opts.merchant, 5, 50]
       : this.rng.pick(MERCHANTS);

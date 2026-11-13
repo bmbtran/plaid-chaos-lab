@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { InvariantId, RunResult, Script } from '../types.ts';
+import type { InvariantId, RunResult, RunSource, ScenarioMeta, Script } from '../types.ts';
 import { SCENARIOS } from '../scenarios/index.ts';
 import { runScript } from './runner.ts';
 import type { Target } from './targets.ts';
@@ -16,6 +16,8 @@ export interface Fixture {
   tool: 'plaid-chaos-lab';
   scenario: string;
   title: string;
+  /** Where the recorded events came from. Sandbox runs replay their observed transitions offline. */
+  source: RunSource;
   seed: number;
   finalChecks: InvariantId[];
   script: Script;
@@ -26,13 +28,14 @@ export interface Fixture {
   };
 }
 
-export function toFixture(run: RunResult): Fixture {
-  const scenario = SCENARIOS.find((s) => s.id === run.scenario);
+export function toFixture(run: RunResult, meta?: ScenarioMeta): Fixture {
+  const scenario = meta ?? SCENARIOS.find((s) => s.id === run.scenario);
   return {
     fixtureVersion: FIXTURE_VERSION,
     tool: 'plaid-chaos-lab',
     scenario: run.scenario,
     title: scenario?.title ?? run.scenario,
+    source: run.source,
     seed: run.seed,
     finalChecks: scenario?.finalChecks ?? [],
     script: run.script,
@@ -46,9 +49,9 @@ export function toFixture(run: RunResult): Fixture {
   };
 }
 
-export async function writeFixture(path: string, run: RunResult): Promise<void> {
+export async function writeFixture(path: string, run: RunResult, meta?: ScenarioMeta): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(toFixture(run), null, 2) + '\n', 'utf8');
+  await writeFile(path, JSON.stringify(toFixture(run, meta), null, 2) + '\n', 'utf8');
 }
 
 export async function readFixture(path: string): Promise<Fixture> {
@@ -64,6 +67,7 @@ export async function replay(fixture: Fixture, target: Target): Promise<RunResul
   return runScript({
     target,
     seed: fixture.seed,
+    source: (fixture.source ?? 'synthetic') === 'synthetic' ? 'synthetic' : 'recorded',
     script: fixture.script,
     scenario: {
       id: fixture.scenario,

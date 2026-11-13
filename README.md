@@ -1,178 +1,206 @@
 # Plaid Integration Chaos Lab
 
-**A contract tester for the hard parts of a Plaid integration.** Point it at your webhook handler and it runs adversarial, reproducible Transactions and Item lifecycle scenarios: pending→posted replacement, duplicate and out-of-order webhooks, mutation mid-pagination, `ITEM_LOGIN_REQUIRED` → `LOGIN_REPAIRED`, missed webhooks. It then tells you whether your app's state is still correct.
+A test harness for the parts of a Plaid integration that usually break in production: pending transactions that post, webhooks that arrive twice or out of order, data that changes mid-pagination, Items that need re-authentication, and webhooks that never arrive.
 
-> Unofficial. Not affiliated with or endorsed by Plaid Inc. Uses only synthetic data.
+You connect your webhook handler. The lab plays out each situation, then compares what your app stores with what Plaid says is true. When the two disagree, it shows the sequence of events that caused it, what your user would see, and a fixture that reproduces it in CI.
 
-Plaid Sandbox lets you *fire* webhooks. It doesn't tell you whether your database is right afterwards. This tool does. For every failure you get:
+Unofficial; not affiliated with Plaid Inc.
 
-- the **invariant** that broke (e.g. `no-pending-posted-double-count`)
-- **what the user would see** ("Spending is overstated by $159.30")
-- the exact **counterexample**: every webhook, bank change and `/transactions/sync` call with its decoded cursor
-- an app-vs-bank **state diff**
-- a **replay fixture** you can commit and run in CI
-
-## 60-second demo
-
-```bash
+```
 npm install
-npm run demo:naive     # a "typical first integration": 7 of 8 scenarios fail
-npm run demo:robust    # the corrected reference app: 8/8 pass across 25 seeds
+npm run demo:naive      # a typical first integration: 7 of 8 scenarios fail
+npm run demo:robust     # the corrected version: all pass
+npm run demo:sandbox    # real Plaid Sandbox (needs Sandbox keys in .env)
 ```
 
-```text
-✗ pending-to-posted              FAIL  failed 5/5 seeds · counterexample seed 1, page size 2
-    ✗ no-pending-posted-double-count @ final
-      pending txn_2d1ffd57ed "Whole Foods Market" $159.30 (pending) is still stored alongside its
-      posted replacement txn_c2a8790c95 "Whole Foods Market" $159.30
-    What the user sees:
-      • Spending is overstated by $159.30: the app shows $442.81, the bank says $283.51.
-      • "Whole Foods Market" is listed twice: once as pending ($159.30) and once as posted ($159.30).
-    Counterexample:
-       7. bank v2: post txn_2d1ffd57ed → txn_c2a8790c95 "Whole Foods Market" $159.30 (pending removed + posted added)
-       8. → webhook SYNC_UPDATES_AVAILABLE delivered
-       9. app → /transactions/sync cursor=v1 ⇒ page 1/2: +2 ~0 -0 has_more
-      10. app → /transactions/sync cursor=page 2 of loop from v1 ⇒ page 2/2: +0 ~0 -1
-    Final state (app vs bank): 4 rows ok
-      DOUBLE-COUNT txn_2d1ffd57ed Whole Foods Market   app $159.30 (pending)      bank gone
-    Replay fixture: chaos-reports/…/fixtures/pending-to-posted.seed1.json
+## What a failure looks like
 
-✗ mutation-during-pagination     FAIL
-      13. ⚡ bank mutated mid-pagination (v3): remove txn_2d1ffd57ed "Whole Foods Market" …
-      14. app → /transactions/sync cursor=page 4 of loop from v1 ⇒ error TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION
-      15. app → /transactions/sync cursor=page 4 of loop from v1 ⇒ error TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION
-    ✗ sync-restarts-from-original-cursor: after the mutation error at #14, the next call (#15)
-      used cursor=page 4 of loop from v1 instead of restarting with cursor=v1
+```
+FAIL  pending-to-posted               failed 3 of 3 seeds; showing seed 1
+
+      no-pending-posted-double-count at final
+        pending txn_2d1ffd57ed "Whole Foods Market" $159.30 (pending) is still stored
+        alongside its posted replacement txn_c2a8790c95 "Whole Foods Market" $159.30
+
+      What the user sees
+        Spending is overstated by $159.30: the app shows $442.81, the bank says $283.51.
+        "Whole Foods Market" is listed twice: once as pending ($159.30) and once as posted ($159.30).
+
+      Events
+         7  bank      v2: pending txn_2d1ffd57ed posts as txn_c2a8790c95 "Whole Foods Market" $159.30; …
+         8  webhook   SYNC_UPDATES_AVAILABLE
+         9  call      /transactions/sync cursor=v1: page 1/2: +2 ~0 -0 has_more
+        10  call      /transactions/sync cursor=page 2 of loop from v1: page 2/2: +0 ~0 -1
+        11  check     final
+
+      Final state (4 of 5 rows match the bank)
+        double count  txn_2d1ffd57ed  Whole Foods Market     app $159.30 pending      bank removed
+
+      fixture  chaos-reports/2026-11-13-04-31-07/fixtures/pending-to-posted.seed1.json
 ```
 
-A full Markdown report (`report.md`) and machine-readable `report.json` are written next to the fixtures.
+The app read both pages, but it ignored the `removed` entry on page 2, so the pending charge stayed next to its posted replacement. Each run also writes `report.md` and `report.json`.
+
+## Where the data comes from
+
+| Mode | Command | What it uses |
+|---|---|---|
+| Synthetic | `run --adapter app.ts` | A fake Plaid with generated transactions. Fast, deterministic, offline. |
+| Recorded | `run --adapter app.ts --data cassette.json` | The same fake Plaid, filled with transactions recorded from Plaid Sandbox (`chaos-lab record`). Real field shapes and merchants, still deterministic. |
+| Sandbox | `run --adapter app.ts --sandbox` | Real Plaid Sandbox for everything Sandbox can reproduce. Recorded data for the rest. |
+
+Here's what Plaid Sandbox can and can't reproduce, as tested against the live API:
+
+| Situation | In Sandbox | How the lab gets it |
+|---|---|---|
+| Item with a few hundred transactions over 7 accounts (real pagination at `count=100`) | yes | `/sandbox/public_token/create` with `user_transactions_dynamic` |
+| Pending transactions posting (removed + posted with `pending_transaction_id`) | yes | `/transactions/refresh`. Sandbox ignores a refresh sent right after the historical pull, so the lab retries. |
+| New transactions | yes | `/sandbox/transactions/create`, then a refresh |
+| `ITEM_LOGIN_REQUIRED` | yes | `/sandbox/item/reset_login`. Sync and `/item/get` then really return it. |
+| Duplicate, late, and missing webhooks | delivery only | The lab sends the webhook bodies itself, so it decides when each one arrives |
+| Repairing a login | no (needs Link update mode in a browser) | Recorded data |
+| Data changing mid-pagination | no (not on demand) | Recorded data |
+| Exact page boundaries | no | Recorded data |
+
+Ground truth in Sandbox mode is the lab's own full `/transactions/sync` drain, with its own cursor, plus `/item/get`. If Sandbox doesn't produce the needed situation (for example, a refresh that never lands), the scenario is reported as inconclusive. It is never reported as a pass.
+
+A Sandbox run also records every change it observed as fake-bank steps. So a failure found against real Sandbox becomes a fixture that replays offline, with real item ids and access tokens replaced.
 
 ## Scenarios
 
-| Scenario | What the lab does | Typical bug it catches |
-|---|---|---|
-| `pending-to-posted` | A pending txn posts: removed + new posted txn with `pending_transaction_id`, amount may change (tip). A small page cap puts the removal on a later page. | Ignoring `removed` → double count |
-| `duplicate-webhook-delivery` | The same `SYNC_UPDATES_AVAILABLE` arrives twice concurrently, then as a late retry | Concurrent handlers + appends → duplicates |
-| `out-of-order-item-events` | `LOGIN_REPAIRED` arrives before the stale `ERROR` | Item health taken from arrival order instead of `/item/get` |
-| `paginated-sync` | Multi-page history; later modifications, a reversal and new txns span pages | Reading one page |
-| `mutation-during-pagination` | Bank changes after page *k*; the next page returns `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION` | Retrying the failed page or keeping partial pages |
-| `login-required-then-repaired` | Sync fails with `ITEM_LOGIN_REQUIRED` (with a stale sync webhook during the outage), then `LOGIN_REPAIRED` + new data | Wiping data on errors; never clearing the reconnect banner |
-| `missed-webhook-reconcile` | A webhook is dropped and nothing else arrives | No periodic reconciliation job |
-| `missed-webhook-catchup` | A webhook is dropped, a later one arrives | Control case: syncing from a stored cursor recovers automatically |
+Fake bank (synthetic or recorded data):
 
-The seed controls transaction data, the page-size cap (1–4), which page the mutation fires after, and async interleaving. Run many seeds with `--runs N`.
+| Scenario | What happens | The bug it catches |
+|---|---|---|
+| `pending-to-posted` | A pending transaction posts; the removal lands on a later page than the addition | Ignoring `removed` |
+| `duplicate-webhook-delivery` | The same webhook twice at once, then a late retry | Concurrent handlers that append rows |
+| `out-of-order-item-events` | `LOGIN_REPAIRED` arrives before the older `ERROR` | Item health taken from arrival order |
+| `paginated-sync` | Modifications, a reversal, and new transactions across pages | Reading one page |
+| `mutation-during-pagination` | The bank changes after page *k*; the next page returns `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION` | Retrying the failed page instead of restarting the loop |
+| `login-required-then-repaired` | Sync fails with `ITEM_LOGIN_REQUIRED`, then the login is repaired and new data arrives | Wiping data on errors; a reconnect prompt that never clears |
+| `missed-webhook-reconcile` | A webhook is dropped and nothing else arrives | No scheduled catch-up sync |
+| `missed-webhook-catchup` | A webhook is dropped, a later one arrives | Control case. Cursor-based sync recovers on its own |
+
+Real Sandbox (with `--sandbox`): `sandbox-initial-sync`, `sandbox-pending-to-posted`, `sandbox-duplicate-webhook`, `sandbox-login-required`, `sandbox-missed-webhook`. Run `chaos-lab list` for descriptions.
 
 ## Invariants
 
-| Invariant | Severity |
+| Invariant | Fails when |
 |---|---|
-| `no-duplicate-transactions` — each `transaction_id` stored once | error |
-| `no-pending-posted-double-count` — never hold a pending txn and its posted replacement | error |
-| `no-phantom-transactions` — nothing the bank no longer has | error |
-| `no-missing-transactions` — everything the bank has | error |
-| `transaction-fields-current` — amounts / pending / date are the latest version | error |
-| `item-status-matches` — the app's reconnect prompt matches `/item/get` | error |
-| `sync-restarts-from-original-cursor` — after a mutation error, restart from the loop's first cursor | error |
-| `webhook-handlers-succeed` — handlers don't throw / return non-2xx | warn |
+| `no-duplicate-transactions` | A `transaction_id` is stored more than once |
+| `no-pending-posted-double-count` | The app holds a pending transaction and the posted one that replaced it |
+| `no-phantom-transactions` | The app shows something the bank no longer has |
+| `no-missing-transactions` | The bank has something the app doesn't |
+| `transaction-fields-current` | Amount, pending flag or date is out of date |
+| `item-status-matches` | The app's reconnect prompt disagrees with `/item/get` |
+| `sync-restarts-from-original-cursor` | After a mutation error, the next sync call doesn't use the loop's first cursor |
+| `webhook-handlers-succeed` | A handler throws or returns non-2xx (warning only) |
 
-Checkpoints check invariants *during* a scenario too. For example, `login-required-then-repaired` verifies that data survives the outage, not just that it comes back afterwards.
+Some scenarios also check invariants partway through. `login-required-then-repaired`, for example, checks that the user's data is still there during the outage, not only after it ends.
 
-## Testing your app
+## Connecting your app
 
-### Option A — in-process adapter (TypeScript / JavaScript)
-
-Write a module whose default export builds your integration around the Plaid client the lab hands you. That client has the `PlaidApi` call shape from `plaid/legacy` (`transactionsSync`, `itemGet`, axios-style errors).
+In-process, for JavaScript or TypeScript. Export a factory that wires your integration to the Plaid client the lab passes in. That client has the call shape of `PlaidApi` from `plaid/legacy`, and in `--sandbox` mode it is backed by real Sandbox.
 
 ```ts
-// my-adapter.ts
 import type { AdapterFactory } from 'plaid-chaos-lab';
-import { createMyIntegration } from './src/plaid-integration';
 
 const factory: AdapterFactory = ({ plaid }) => {
-  const app = createMyIntegration({ plaid, db: inMemoryDb() });
+  const app = createMyIntegration({ plaid, db: testDb() });
   return {
     registerItem: ({ itemId, accessToken }) => app.saveItem(itemId, accessToken),
     handleWebhook: (body) => app.onPlaidWebhook(body),
     getState: async (itemId) => ({
-      transactions: await app.listTransactions(itemId),   // [{ transaction_id, amount, pending?, date? }]
-      itemStatus: await app.needsReconnect(itemId) ? 'login_required' : 'healthy',
+      transactions: await app.listTransactions(itemId), // [{ transaction_id, amount, pending?, date? }]
+      itemStatus: (await app.needsReconnect(itemId)) ? 'login_required' : 'healthy',
     }),
-    reconcile: (itemId) => app.scheduledSync(itemId),     // optional
+    reconcile: (itemId) => app.scheduledSync(itemId), // optional
   };
 };
 export default factory;
 ```
 
-```bash
+```
 npx chaos-lab run --adapter my-adapter.ts --runs 20
 ```
 
-### Option B — HTTP mode (any language)
-
-The lab runs a fake Plaid API (default port 4010) that the official SDKs can talk to. Set your Plaid client's base URL to it, and expose these endpoints:
+Over HTTP, for any language. The lab serves a fake Plaid API on port 4010 that the official SDKs accept; point your Plaid base URL at it. Your app exposes:
 
 | Endpoint | Purpose |
 |---|---|
-| `POST <webhook-url>` | Receives Plaid webhooks (respond fast; the lab waits for your async work to settle) |
-| `POST <control>/reset` | Clear all state before a run |
-| `POST <control>/items` `{item_id, access_token}` | Store an Item as if `/item/public_token/exchange` had just happened |
-| `GET <control>/state?item_id=` | `{ transactions: [...], itemStatus }` as your UI would show it |
-| `POST <control>/reconcile` `{item_id}` | Optional: run your scheduled sync (404/501 = not implemented) |
+| `POST <webhook-url>` | Receives webhooks |
+| `POST <control>/reset` | Clears state before each run |
+| `POST <control>/items` `{item_id, access_token}` | Stores an Item, as after a token exchange |
+| `GET <control>/state?item_id=` | Returns `{ transactions, itemStatus }` as your UI would show them |
+| `POST <control>/reconcile` `{item_id}` | Runs your scheduled sync (404 or 501 if you have none) |
 
-```bash
-PLAID_BASE_URL=http://127.0.0.1:4010 npx tsx examples/http-app.ts      # example app (official SDK)
-npx chaos-lab run --webhook-url http://127.0.0.1:3005/webhooks/plaid \
-                  --control-url http://127.0.0.1:3005/chaos --plaid-port 4010
+```
+PLAID_BASE_URL=http://127.0.0.1:4010 npx tsx examples/http-app.ts
+npx chaos-lab run --webhook-url http://127.0.0.1:3005/webhooks/plaid --control-url http://127.0.0.1:3005/chaos
 ```
 
-`examples/http-app.ts` is verified against **both** official SDK styles: the v51 `PlaidClient` and the classic `PlaidApi` from `plaid/legacy`.
+[examples/http-app.ts](examples/http-app.ts) is tested with both the v51 `PlaidClient` and the classic `PlaidApi`. To run it against real Sandbox instead, set `PLAID_BASE_URL=https://sandbox.plaid.com` and pass `--sandbox` to the lab.
 
-### Keep counterexamples as CI regression tests
+## Keeping failures fixed
 
-```bash
+```
 npx chaos-lab replay chaos-reports/<run>/fixtures/pending-to-posted.seed1.json --adapter my-adapter.ts
-# → "recorded failed, replay passes (fixed!)"
 ```
+
+Or in a test:
 
 ```ts
 import { replayFixtureFile } from 'plaid-chaos-lab';
+
 test('pending→posted regression', async () => {
   const r = await replayFixtureFile('fixtures/pending-to-posted.seed1.json', myAdapterFactory);
   assert.ok(r.passed);
 });
 ```
 
-See [examples/ci-fixture.test.ts](examples/ci-fixture.test.ts).
+## Sandbox setup
+
+Create `.env` with your Sandbox keys from the Plaid Dashboard:
+
+```
+PLAID_CLIENT_ID=...
+PLAID_SECRET=...
+```
+
+The keys go to Plaid in the request body and nowhere else. Errors, timelines, reports, fixtures and cassettes never contain them; `npm run test:sandbox` and `npm run check-secrets` verify that. Each Sandbox scenario creates its own Item and removes it afterwards.
+
+```
+npx chaos-lab record --out my-cassette.json        # record real Sandbox data
+npx chaos-lab run --adapter my-adapter.ts --sandbox # real Sandbox + recorded fallbacks
+```
 
 ## CLI
 
 ```
 chaos-lab list
-chaos-lab run    (--adapter <module> | --webhook-url <url> --control-url <url> [--plaid-port 4010])
-                 [--scenario a,b] [--seed 1] [--runs 10] [--out dir] [--no-report] [--json]
-chaos-lab replay <fixture.json...> <target>
+chaos-lab run     <target> [--scenario a,b] [--seed 1] [--runs 10] [--data file] [--sandbox] [--out dir] [--json]
+chaos-lab record  [--out cassette.json]
+chaos-lab replay  <fixture.json...> <target>
 ```
 
-Exit code `0` all passed · `1` an invariant failed · `2` usage error.
+Exit codes: `0` everything passed, `1` an invariant failed, `2` usage or setup error, or a Sandbox scenario was inconclusive.
 
 ## How it works
 
-- **Ground truth** ([src/fake-plaid/bank.ts](src/fake-plaid/bank.ts)) keeps a versioned ledger per Item. A version cursor syncs as the exact diff between two versions (added / modified / removed, ordered by last change). Each sync loop pages over a frozen snapshot. If the bank changes while a loop is open, its page cursors return `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`, but the loop's original cursor still works, as Plaid documents.
-- **Scenarios** are seeded generators that produce a fully materialized, JSON-serializable script. Replaying a fixture runs the exact recorded steps.
-- **Determinism**: the in-process fake client yields a seeded number of event-loop turns per call, so concurrent webhook handlers really interleave, and they do so the same way every time. The same seed gives byte-identical results (tested).
-- **Validation**: a reference app with 8 toggleable bugs ([examples/reference-app.ts](examples/reference-app.ts)) proves each scenario catches the bug it targets. Each bug alone is caught on every seed tested, and the corrected app has zero false positives over 200 runs.
+The fake bank ([src/fake-plaid/bank.ts](src/fake-plaid/bank.ts)) keeps a versioned ledger per Item. A cursor names a version. A sync from it returns the diff to the current version (added, modified, removed, ordered by last change), paged over a frozen snapshot. If the bank changes while a pagination loop is open, that loop's page cursors fail with `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`. The loop's first cursor keeps working, as Plaid documents.
 
-### Fidelity notes
+Scenarios are seeded generators that produce a plain JSON script, so a fixture replays exactly. The in-process fake client yields a seeded number of event-loop turns per call. Concurrent handlers therefore interleave for real, and the same way every time.
 
-- Only `/transactions/sync` and `/item/get` are simulated. Transaction objects include the core fields.
-- The page-size cap is a chaos knob. Real Plaid paginates at your `count`, but your code must not assume a single page either way.
-- Webhook JWT verification isn't simulated. Turn verification off for test runs, or stub it in your adapter.
+The reference app ([examples/reference-app.ts](examples/reference-app.ts)) has eight switchable bugs. The tests turn each one on alone and confirm that its scenario catches it: on every seed tried with synthetic data, and again with recorded data and with a stubbed Sandbox. The corrected app passes every scenario across 25 seeds.
+
+Limits: only `/transactions/sync` and `/item/get` are simulated. The page-size cap is a test setting (real Plaid pages at your `count`). Webhook JWT verification isn't simulated, so turn it off in test runs.
 
 ## Development
 
-```bash
+```
 npm run typecheck
-npm test            # 33 tests: fake Plaid, invariants, detection matrix, determinism, replay, HTTP with both SDKs, CLI
+npm test               # offline: fake Plaid, invariants, bug matrix, replay, HTTP with both SDKs, CLI, Sandbox layer
+npm run test:sandbox   # live Plaid Sandbox (needs .env)
 ```
 
-The spec and definitions of done are in [PLAN.md](PLAN.md).
+Spec and definitions of done: [PLAN.md](PLAN.md).

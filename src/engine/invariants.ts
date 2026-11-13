@@ -37,6 +37,7 @@ function list(ids: string[], seen: Map<string, Transaction>): string {
 }
 
 const money = (n: number) => `$${n.toFixed(2)}`;
+const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export const INVARIANTS: Record<InvariantId, InvariantDef> = {
   'no-duplicate-transactions': {
@@ -50,7 +51,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       if (dups.length === 0) return { passed: true, message: `${app.transactions.length} transactions, all unique` };
       return {
         passed: false,
-        message: `${dups.length} transaction(s) stored more than once: ${dups
+        message: `${count(dups.length, 'transaction')} stored more than once:${dups
           .slice(0, MAX_LISTED)
           .map(([id, n]) => `${label(seen.get(id), id)} ×${n}`)
           .join(', ')}`,
@@ -84,7 +85,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       const truthIds = new Set(truth.map((t) => t.transaction_id));
       const phantoms = [...new Set(app.transactions.map((t) => t.transaction_id).filter((id) => !truthIds.has(id)))];
       if (phantoms.length === 0) return { passed: true, message: 'no phantom transactions' };
-      return { passed: false, message: `${phantoms.length} transaction(s) no longer exist at the bank: ${list(phantoms, seen)}` };
+      return { passed: false, message: `${count(phantoms.length, 'transaction')} the bank no longer has: ${list(phantoms, seen)}` };
     },
   },
 
@@ -96,7 +97,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       const appIds = new Set(app.transactions.map((t) => t.transaction_id));
       const missing = truth.map((t) => t.transaction_id).filter((id) => !appIds.has(id));
       if (missing.length === 0) return { passed: true, message: `all ${truth.length} bank transactions present` };
-      return { passed: false, message: `${missing.length} of ${truth.length} bank transaction(s) missing: ${list(missing, seen)}` };
+      return { passed: false, message: `${missing.length} of ${count(truth.length, 'bank transaction')} missing: ${list(missing, seen)}` };
     },
   },
 
@@ -119,7 +120,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       if (stale.length === 0) return { passed: true, message: 'stored fields match the bank' };
       return {
         passed: false,
-        message: `${stale.length} stale transaction(s): ${stale.slice(0, MAX_LISTED).join('; ')}${stale.length > MAX_LISTED ? '; …' : ''}`,
+        message: `${count(stale.length, 'stale transaction')}:${stale.slice(0, MAX_LISTED).join('; ')}${stale.length > MAX_LISTED ? '; …' : ''}`,
       };
     },
   },
@@ -168,7 +169,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
         }
       }
       return exercised
-        ? { passed: true, message: `restarted correctly after ${exercised} mutation error(s)` }
+        ? { passed: true, message: `restarted correctly after ${count(exercised, 'mutation error')}` }
         : { passed: true, message: 'not exercised (no mutation error occurred)' };
     },
   },
@@ -182,7 +183,7 @@ export const INVARIANTS: Record<InvariantId, InvariantDef> = {
       if (errors.length === 0) return { passed: true, message: 'all webhook handlers succeeded' };
       return {
         passed: false,
-        message: `${errors.length} webhook handler failure(s): ${errors
+        message: `${count(errors.length, 'webhook handler failure')}:${errors
           .slice(0, 2)
           .map((e) => `#${e.seq} ${e.code}: ${e.message}`)
           .join('; ')}`,

@@ -1,39 +1,54 @@
 import type { AppTransaction, RunResult, StateCapture, TimelineEvent, Transaction } from '../types.ts';
 import { describeCursor } from '../fake-plaid/bank.ts';
 
-const clip = (s: string, n = 160) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
-const note = (n?: string) => (n ? ` — ${n}` : '');
+const clip = (s: string, n = 150) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+const note = (n?: string) => (n ? ` (${n})` : '');
 
-export function formatEvent(e: TimelineEvent): string {
+export interface FormattedEvent {
+  /** Short fixed-width category label. */
+  tag: string;
+  text: string;
+  /** Events worth drawing the eye to: faults the lab injected and failures. */
+  emphasis: boolean;
+}
+
+export const TAG_WIDTH = 9;
+
+export function formatEvent(e: TimelineEvent): FormattedEvent {
+  const ev = (tag: string, text: string, emphasis = false) => ({ tag, text, emphasis });
   switch (e.kind) {
     case 'register':
-      return `register Item ${e.itemId}`;
+      return ev('item', `registered ${e.itemId}`);
     case 'bank':
-      return `bank v${e.version}: ${clip(e.summary)}${note(e.note)}`;
+      return ev('bank', `v${e.version}: ${clip(e.summary)}${note(e.note)}`);
     case 'item-error':
-      return e.errorCode ? `Item enters ${e.errorCode}${note(e.note)}` : `Item healthy again${note(e.note)}`;
+      return e.errorCode ? ev('item', `now ${e.errorCode}${note(e.note)}`, true) : ev('item', `healthy again${note(e.note)}`);
     case 'armed':
-      return `chaos armed: after page ${e.afterPage} is served → ${clip(e.summary, 120)}`;
+      return ev('fault', `after page ${e.afterPage} the bank will change: ${clip(e.summary, 110)}`);
     case 'mutation-fired':
-      return `⚡ bank mutated mid-pagination (v${e.version}): ${clip(e.summary, 120)}`;
+      return ev('fault', `bank changed mid-pagination, now v${e.version}`, true);
     case 'webhook':
       return e.delivery === 'dropped'
-        ? `✗ webhook ${e.code} DROPPED${note(e.note)}`
-        : `→ webhook ${e.code} delivered${e.concurrentGroup ? ` [concurrent #${e.concurrentGroup}]` : ''}${note(e.note)}`;
+        ? ev('dropped', `${e.code}${note(e.note)}`, true)
+        : ev('webhook', `${e.code}${e.concurrentGroup ? ` [concurrent ${e.concurrentGroup}]` : ''}${note(e.note)}`);
     case 'handler-error':
-      return `! webhook handler for ${e.code} failed: ${clip(e.message, 120)}`;
+      return ev('error', `${e.code} handler failed: ${clip(e.message, 110)}`, true);
     case 'api':
-      return `app → ${e.endpoint}${e.cursor ? ` ${describeCursor(e.cursor)}` : ''} ⇒ ${e.outcome}`;
+      return ev('call', `${e.endpoint}${e.cursor ? ` ${describeCursor(e.cursor)}` : ''}: ${e.outcome}`, !!e.errorCode);
     case 'reconcile':
-      return e.outcome === 'unsupported'
-        ? `reconcile(): not implemented by the app${note(e.message)}`
-        : `reconcile(): ${e.outcome}${note(e.message)}`;
+      return ev('reconcile', e.outcome === 'unsupported' ? `not implemented by the app${note(e.message)}` : `${e.outcome}${note(e.message)}`, e.outcome !== 'ran');
     case 'checkpoint':
-      return `── checkpoint: ${e.label}`;
+      return ev('check', e.label);
   }
 }
 
-export type RowStatus = 'ok' | 'DUPLICATE' | 'DOUBLE-COUNT' | 'PHANTOM' | 'MISSING' | 'STALE';
+/** Plain one-line form for Markdown and logs. */
+export function eventLine(e: TimelineEvent): string {
+  const f = formatEvent(e);
+  return `${f.tag.padEnd(TAG_WIDTH)} ${f.text}`;
+}
+
+export type RowStatus = 'ok' | 'duplicate' | 'double count' | 'phantom' | 'missing' | 'stale';
 
 export interface DiffRow {
   id: string;
@@ -56,7 +71,7 @@ export function diffState(capture: StateCapture, run: Pick<RunResult, 'states'>,
       .filter((t) => t.pending_transaction_id && appById.has(t.transaction_id))
       .map((t) => t.pending_transaction_id as string),
   );
-  const fmt = (n: number) => `$${n.toFixed(2)}${''}`;
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
   const rows: DiffRow[] = [];
   const ids = [...new Set([...capture.truth.transactions.map((t) => t.transaction_id), ...appById.keys()])];
   for (const id of ids) {
@@ -64,17 +79,18 @@ export function diffState(capture: StateCapture, run: Pick<RunResult, 'states'>,
     const as = appById.get(id) ?? [];
     const merchant =
       t?.merchant_name ??
+      t?.name ??
       (as[0]?.name as string | undefined) ??
       seen?.get(id)?.merchant_name ??
       '?';
-    const appText = as.length ? as.map((a) => fmt(Number(a.amount)) + (a.pending ? ' (pending)' : '')).join(' + ') : '—';
-    const bankText = t ? fmt(t.amount) + (t.pending ? ' (pending)' : '') : 'gone';
+    const appText = as.length ? as.map((a) => fmt(Number(a.amount)) + (a.pending ? ' pending' : '')).join(' and ') : 'not shown';
+    const bankText = t ? fmt(t.amount) + (t.pending ? ' pending' : '') : 'removed';
     let status: RowStatus = 'ok';
-    if (!t && replacedPending.has(id)) status = 'DOUBLE-COUNT';
-    else if (!t) status = 'PHANTOM';
-    else if (as.length === 0) status = 'MISSING';
-    else if (as.length > 1) status = 'DUPLICATE';
-    else if (Math.abs(Number(as[0].amount) - t.amount) > 0.004 || (as[0].pending !== undefined && as[0].pending !== t.pending)) status = 'STALE';
+    if (!t && replacedPending.has(id)) status = 'double count';
+    else if (!t) status = 'phantom';
+    else if (as.length === 0) status = 'missing';
+    else if (as.length > 1) status = 'duplicate';
+    else if (Math.abs(Number(as[0].amount) - t.amount) > 0.004 || (as[0].pending !== undefined && as[0].pending !== t.pending)) status = 'stale';
     rows.push({ id, merchant, app: appText, bank: bankText, status });
   }
   return rows;
